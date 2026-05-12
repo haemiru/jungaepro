@@ -29,3 +29,6 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Claude Code local settings
+.claude/
