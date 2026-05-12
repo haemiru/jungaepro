@@ -11,7 +11,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-a
 export const supabaseAuth = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: localStorage,
-    storageKey: 'smart-home-auth',
+    storageKey: 'jungaepro-auth',
     detectSessionInUrl: true,
     autoRefreshToken: true,
   },
@@ -24,7 +24,7 @@ export const supabaseAuth = createClient<Database>(supabaseUrl, supabaseAnonKey,
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   accessToken: async () => {
     try {
-      const raw = localStorage.getItem('smart-home-auth')
+      const raw = localStorage.getItem('jungaepro-auth')
       if (!raw) return null
       return (JSON.parse(raw) as { access_token?: string }).access_token ?? null
     } catch {

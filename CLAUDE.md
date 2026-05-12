@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Smart Home** — 공인중개사 올인원 업무 플랫폼. 매물 관리, 계약, CRM, 문의, AI 도구, 통계, 법률/서식, 공동중개, 현장점검, 임대 관리 등을 하나의 웹앱에서 제공.
+**Jungaepro** (구 Smart Home) — 공인중개사 올인원 업무 플랫폼. 매물 관리, 계약, CRM, 문의, AI 도구, 통계, 법률/서식, 공동중개, 현장점검, 임대 관리 등을 하나의 웹앱에서 제공.
 
 ## Commands
 

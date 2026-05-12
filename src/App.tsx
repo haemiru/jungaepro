@@ -19,7 +19,7 @@ export default function App() {
       // Browser/tab close detection: if sessionStorage flag is missing
       // but localStorage has auth, it means the browser was restarted → sign out
       if (!sessionStorage.getItem(SESSION_FLAG)) {
-        const stored = localStorage.getItem('smart-home-auth')
+        const stored = localStorage.getItem('jungaepro-auth')
         if (stored) {
           await supabaseAuth.auth.signOut()
         }

@@ -23,7 +23,7 @@ export async function uploadPropertyPhoto(file: File, agentId: string): Promise<
   const path = `${agentId}/${timestamp}-${random}.${ext}`
 
   // localStorage에서 직접 토큰 읽기 (supabase.auth.getSession()이 hang되는 문제 우회)
-  const raw = localStorage.getItem('smart-home-auth')
+  const raw = localStorage.getItem('jungaepro-auth')
   const token = raw ? (JSON.parse(raw) as { access_token?: string }).access_token : null
   if (!token) throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해주세요.')
 
@@ -106,7 +106,7 @@ export async function uploadRegistryPdf(file: File, agentId: string): Promise<{ 
   const safeName = file.name.replace(/[^a-zA-Z0-9가-힣._-]/g, '_')
   const path = `${agentId}/registry/${timestamp}-${random}-${safeName}`
 
-  const raw = localStorage.getItem('smart-home-auth')
+  const raw = localStorage.getItem('jungaepro-auth')
   const token = raw ? (JSON.parse(raw) as { access_token?: string }).access_token : null
   if (!token) throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해주세요.')
 
