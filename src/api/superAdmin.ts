@@ -27,3 +27,11 @@ export async function updateAgentPlan(agentId: string, plan: string): Promise<vo
   })
   if (error) throw error
 }
+
+export async function verifyAgent(agentId: string, verified: boolean): Promise<void> {
+  const { error } = await supabase.rpc('admin_verify_agent', {
+    target_agent_id: agentId,
+    verified,
+  })
+  if (error) throw error
+}

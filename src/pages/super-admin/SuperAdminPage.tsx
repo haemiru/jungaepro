@@ -1,8 +1,33 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '@/stores/authStore'
-import { fetchAllAgents, updateAgentPlan } from '@/api/superAdmin'
+import { fetchAllAgents, updateAgentPlan, verifyAgent } from '@/api/superAdmin'
 import type { AdminAgent } from '@/api/superAdmin'
+import { sendEmail } from '@/api/email'
 import toast from 'react-hot-toast'
+
+function buildVerificationEmailHtml(agent: AdminAgent): string {
+  const portalUrl = agent.slug
+    ? `https://${agent.slug}.jungaepro.com`
+    : 'https://www.jungaepro.com'
+  return `
+    <div style="font-family:-apple-system,'Noto Sans KR',sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1f2937;">
+      <h1 style="font-size:20px;font-weight:700;color:#2563eb;margin:0 0 16px;">사무소 인증이 승인되었습니다</h1>
+      <p style="font-size:14px;line-height:1.7;margin:0 0 12px;">안녕하세요, <strong>${agent.representative || agent.office_name || '대표자'}</strong> 님.</p>
+      <p style="font-size:14px;line-height:1.7;margin:0 0 16px;">
+        <strong>${agent.office_name || '귀 사무소'}</strong>의 중개프로 가입이 정식 승인되었습니다.
+        이제 모든 기능을 이용하실 수 있으며, 고객은 아래 주소로 사무소에 접속할 수 있습니다.
+      </p>
+      <div style="margin:20px 0;padding:16px;background:#f3f4f6;border-radius:8px;font-size:14px;">
+        <div style="color:#6b7280;font-size:12px;margin-bottom:4px;">사무소 홈페이지</div>
+        <a href="${portalUrl}" style="color:#2563eb;font-weight:600;text-decoration:none;">${portalUrl}</a>
+      </div>
+      <p style="font-size:13px;line-height:1.6;color:#6b7280;margin:16px 0 0;">
+        문의사항이 있으시면 이 메일에 회신해 주세요.<br/>
+        — 중개프로 운영팀
+      </p>
+    </div>
+  `.trim()
+}
 
 const PLAN_OPTIONS = [
   { value: 'free', label: 'Free', color: 'bg-gray-100 text-gray-700' },
@@ -22,6 +47,8 @@ export function SuperAdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [verifyTarget, setVerifyTarget] = useState<AdminAgent | null>(null)
+  const [verifyBusy, setVerifyBusy] = useState(false)
 
   const email = user?.email ?? ''
   const isSuperAdmin = email === 'junominu@gmail.com'
@@ -49,6 +76,42 @@ export function SuperAdminPage() {
       setLoading(false)
     }
   }, [isInitialized, authLoading, isSuperAdmin])
+
+  const handleConfirmVerify = async () => {
+    if (!verifyTarget) return
+    const agent = verifyTarget
+    const nextVerified = !agent.is_verified
+    setVerifyBusy(true)
+    try {
+      await verifyAgent(agent.agent_id, nextVerified)
+      setAgents((prev) =>
+        prev.map((a) => (a.agent_id === agent.agent_id ? { ...a, is_verified: nextVerified } : a))
+      )
+
+      if (nextVerified) {
+        try {
+          await sendEmail({
+            to: agent.email,
+            subject: '[중개프로] 사무소 인증이 승인되었습니다',
+            html: buildVerificationEmailHtml({ ...agent, is_verified: true }),
+          })
+          toast.success('승인 완료 — 안내 메일을 발송했습니다.')
+        } catch (mailErr) {
+          const msg = mailErr instanceof Error ? mailErr.message : '이메일 발송 실패'
+          toast.error(`승인은 완료됐지만 메일 발송 실패: ${msg}`)
+        }
+      } else {
+        toast.success('승인이 취소되었습니다.')
+      }
+
+      setVerifyTarget(null)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '처리에 실패했습니다.'
+      toast.error(msg)
+    } finally {
+      setVerifyBusy(false)
+    }
+  }
 
   const handlePlanChange = async (agentId: string, newPlan: string) => {
     setUpdatingId(agentId)
@@ -247,17 +310,26 @@ export function SuperAdminPage() {
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-center">
                           {agent.is_verified ? (
-                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-600">
-                              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <button
+                              type="button"
+                              onClick={() => setVerifyTarget(agent)}
+                              className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 transition hover:bg-green-200"
+                              title="승인 취소"
+                            >
+                              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
-                            </span>
+                              인증됨
+                            </button>
                           ) : (
-                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-                              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setVerifyTarget(agent)}
+                              className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-blue-700"
+                              title="이 사무소를 승인합니다"
+                            >
+                              승인하기
+                            </button>
                           )}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3">
@@ -288,6 +360,76 @@ export function SuperAdminPage() {
           )}
         </div>
       </div>
+
+      {/* Verify confirmation modal */}
+      {verifyTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => !verifyBusy && setVerifyTarget(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-900">
+              {verifyTarget.is_verified ? '승인을 취소하시겠습니까?' : '사무소를 승인하시겠습니까?'}
+            </h3>
+            <div className="mt-4 space-y-2 rounded-lg bg-gray-50 p-4 text-sm">
+              <div className="flex">
+                <span className="w-20 shrink-0 text-gray-500">사무소</span>
+                <span className="font-medium text-gray-900">{verifyTarget.office_name || '-'}</span>
+              </div>
+              <div className="flex">
+                <span className="w-20 shrink-0 text-gray-500">대표자</span>
+                <span className="text-gray-700">{verifyTarget.representative || '-'}</span>
+              </div>
+              <div className="flex">
+                <span className="w-20 shrink-0 text-gray-500">이메일</span>
+                <span className="text-gray-700">{verifyTarget.email}</span>
+              </div>
+              <div className="flex">
+                <span className="w-20 shrink-0 text-gray-500">Slug</span>
+                <span className="text-gray-700">{verifyTarget.slug || '-'}</span>
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-gray-600">
+              {verifyTarget.is_verified ? (
+                <>승인을 취소하면 해당 사무소의 서브도메인이 비활성화되어 고객 접속이 차단됩니다.</>
+              ) : (
+                <>승인하면 서브도메인이 활성화되고, 가입자에게 안내 메일이 발송됩니다.</>
+              )}
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setVerifyTarget(null)}
+                disabled={verifyBusy}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmVerify}
+                disabled={verifyBusy}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
+                  verifyTarget.is_verified
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {verifyBusy && (
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
+                    <path fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" className="opacity-75" />
+                  </svg>
+                )}
+                {verifyTarget.is_verified ? '승인 취소' : '승인하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1260,6 +1260,10 @@ export type Database = {
         Args: { target_agent_id: string; new_plan: string }
         Returns: undefined
       }
+      admin_verify_agent: {
+        Args: { target_agent_id: string; verified: boolean }
+        Returns: undefined
+      }
     }
     Enums: {
       user_role: UserRole
