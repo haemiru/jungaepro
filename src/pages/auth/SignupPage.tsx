@@ -295,7 +295,7 @@ export function SignupPage() {
         <Input id="officeName" label="사무소명" value={officeName} onChange={(e) => setOfficeName(e.target.value)} required />
         <Input id="representative" label="대표자명" value={representative} onChange={(e) => setRepresentative(e.target.value)} required />
         <Input id="businessNumber" label="사업자등록번호" placeholder="000-00-00000" value={formatBusinessNumber(businessNumber)} onChange={(e) => setBusinessNumber(parseBusinessNumber(e.target.value))} required />
-        <Input id="licenseNumber" label="공인중개사 자격증 번호" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value.replace(/\D/g, ''))} required />
+        <Input id="licenseNumber" label="공인중개사 자격증 번호" placeholder="11-2021-02258" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} required />
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">사무소 주소 <span className="text-red-500">*</span></label>
           <div className="flex gap-2">
