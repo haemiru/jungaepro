@@ -27,7 +27,6 @@ export function SearchPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
 
   // Quick search state
   const [activeQuickCard, setActiveQuickCard] = useState<QuickSearchCard | null>(null)
@@ -266,25 +265,12 @@ export function SearchPage() {
           <select value={sort} onChange={(e) => setSort(e.target.value as SortOption)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm">
             {sortOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <div className="flex rounded-lg border border-gray-200">
-            <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 text-xs font-medium ${viewMode === 'list' ? 'bg-gray-100 text-gray-900' : 'text-gray-500'}`}>목록</button>
-            <button onClick={() => setViewMode('map')} className={`px-3 py-1.5 text-xs font-medium ${viewMode === 'map' ? 'bg-gray-100 text-gray-900' : 'text-gray-500'}`}>지도</button>
-          </div>
         </div>
       </div>
 
-      {/* Results */}
+      {/* Results — 지도 보기는 Phase 4-3(검색 지도)에서 복원 */}
       {isLoading ? (
         <div className="py-20 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" /></div>
-      ) : viewMode === 'map' ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-3">
-            {properties.map((p) => <SearchResultCard key={p.id} property={p} />)}
-          </div>
-          <div className="sticky top-32 h-[600px] rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center">
-            <p className="text-sm text-gray-400">카카오맵 API 연동 예정</p>
-          </div>
-        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {properties.map((p) => <SearchResultCard key={p.id} property={p} />)}

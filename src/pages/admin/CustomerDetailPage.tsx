@@ -602,7 +602,7 @@ function ActivityTab({ customerId, activities, propertyCache, onActivityAdded }:
 }
 
 // ============================================================
-// Matching Properties Tab (placeholder)
+// 상담 기록 (Activity)
 // ============================================================
 /** 개별 상담 기록 항목 — 보기/편집/삭제 */
 function ActivityItem({ activity: act, property: prop, onUpdated }: {
@@ -1044,21 +1044,7 @@ ${recentMemos.length > 0 ? `\n최근 상담 내용:\n${recentMemos.join('\n')}` 
               {analysisResult}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
-              <button
-                onClick={() => toast.success('맞춤 매물 추천 발송 기능은 추후 구현 예정입니다.')}
-                className="rounded-lg bg-primary-600 px-4 py-2 text-xs font-medium text-white hover:bg-primary-700"
-              >
-                맞춤 매물 추천 발송
-              </button>
-              <button
-                onClick={() => toast.success('상담 스크립트 생성 기능은 추후 구현 예정입니다.')}
-                className="rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-xs font-medium text-primary-700 hover:bg-primary-100"
-              >
-                상담 스크립트 생성
-              </button>
-            </div>
+            {/* 맞춤 매물 추천 발송·상담 스크립트 생성 버튼은 기능 구현 후 노출 */}
           </div>
         )}
       </div>

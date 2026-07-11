@@ -247,8 +247,8 @@ const featureGroupDefs: FeatureGroup[] = [
   {
     key: 'legal', label: '법률&행정', icon: '⚖️',
     features: [
-      { key: 'registry', label: '등기부등본', description: '등기부등본 조회 및 권리 분석', is_enabled: true, is_locked: false, is_pro: false },
-      { key: 'e_signature', label: '전자서명', description: '카카오/네이버 전자서명 연동', is_enabled: false, is_locked: false, is_pro: true },
+      { key: 'registry', label: '등기부등본', description: '등기부등본 PDF 보관 및 관리', is_enabled: true, is_locked: false, is_pro: false },
+      // e_signature(전자서명)는 카카오/네이버 연동 출시 전까지 기능 목록에서 제외
     ],
   },
   {
@@ -710,12 +710,13 @@ const defaultIntegrations: IntegrationConfig[] = [
   { key: 'instagram', label: '인스타그램', icon: '📸', category: 'SNS', is_connected: false, account_id: '' },
   { key: 'blog', label: '블로그', icon: '📝', category: 'SNS', is_connected: false, url: '' },
   { key: 'band', label: '밴드', icon: '🎵', category: 'SNS', is_connected: false, url: '' },
-  { key: 'kakao_esign', label: '카카오 전자서명', icon: '✍️', category: '전자서명', is_connected: false },
-  { key: 'naver_esign', label: '네이버 전자서명', icon: '✍️', category: '전자서명', is_connected: false },
+  // 전자서명(kakao_esign, naver_esign)은 실연동 출시 전까지 목록에서 제외
 ]
 
 export async function fetchIntegrations(): Promise<IntegrationConfig[]> {
-  return fetchAgentSetting('integrations', defaultIntegrations)
+  const list = await fetchAgentSetting('integrations', defaultIntegrations)
+  // 과거에 저장된 설정에 전자서명 항목이 남아 있어도 숨긴다
+  return list.filter((i) => i.category !== '전자서명')
 }
 
 export async function toggleIntegration(key: string, connected: boolean, data?: { url?: string; account_id?: string }): Promise<void> {

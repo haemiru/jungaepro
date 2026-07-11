@@ -15,7 +15,6 @@ import { Modal } from '@/components/common/Modal'
 import { createInquiry } from '@/api/inquiries'
 import { addFavorite, removeFavorite, checkIsFavorite } from '@/api/favorites'
 import { useAuthStore } from '@/stores/authStore'
-import { isFeatureInPlan } from '@/config/planFeatures'
 import { NearbyTradePrice } from '@/components/property/NearbyTradePrice'
 import type { InquiryType } from '@/types/database'
 import toast from 'react-hot-toast'
@@ -205,19 +204,10 @@ export function PropertyDetailPage() {
               <p className="mt-3 text-xs text-gray-400">대표: {tenant?.representative ?? '-'} · 연락처: {tenant?.phone ?? '-'}</p>
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons — 임장 예약은 문의하기로 통합 (온라인 예약 기능 출시 전) */}
             <div className="space-y-2">
               <Button className="w-full" onClick={() => setIsInquiryOpen(true)}>
                 🔥 이 매물 문의하기
-              </Button>
-              <Button variant="outline" className="w-full" onClick={() => {
-                if (!isFeatureInPlan('inspection_booking', (tenant?.subscription_plan ?? 'free') as import('@/types/database').PlanType)) {
-                  toast('Basic 플랜에서 사용 가능한 기능입니다.', { icon: '🔒' })
-                  return
-                }
-                toast('임장 예약 기능 준비 중입니다.')
-              }}>
-                📅 임장 예약
               </Button>
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="secondary" size="sm" onClick={async () => {
