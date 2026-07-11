@@ -1,4 +1,5 @@
 import { supabase, supabaseAuth } from './supabase'
+import { notifyAdminOfSignup, sendAgentWelcome } from './signupNotify'
 import type { UserRole, StaffRole } from '@/types/database'
 
 interface SignUpParams {
@@ -52,7 +53,7 @@ export async function signUpWithEmail({ email, password, displayName, phone, rol
     console.warn('Profile upsert skipped (DB trigger will handle):', profileError.message)
   }
 
-  // Create agent profile if role is agent
+  // Create agent profile if role is agent (자동 승인: is_verified = true)
   if (role === 'agent' && agentData) {
     const { error: agentError } = await supabase.from('agent_profiles').insert({
       user_id: data.user.id,
@@ -62,13 +63,24 @@ export async function signUpWithEmail({ email, password, displayName, phone, rol
       license_number: agentData.licenseNumber,
       address: agentData.address,
       phone: agentData.phone,
-      is_verified: false,
+      is_verified: true,
       subscription_plan: 'free',
     })
 
     if (agentError) {
       console.warn('Agent profile creation deferred:', agentError.message)
     }
+
+    // 가입 알림 메일 (운영자 알림 + 가입자 환영). 실패해도 회원가입은 성공 처리.
+    const info = {
+      email,
+      displayName,
+      officeName: agentData.officeName,
+      representative: agentData.representative,
+      phone: agentData.phone,
+    }
+    void notifyAdminOfSignup(info).catch((e) => console.warn('admin signup notify failed:', e))
+    void sendAgentWelcome(info).catch((e) => console.warn('agent welcome email failed:', e))
   }
 
   // Safety net for staff: try client-side staff_members insert (non-fatal, trigger should handle it)
