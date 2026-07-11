@@ -32,3 +32,12 @@ dist-ssr
 
 # Claude Code local settings
 .claude/
+.bkit/
+
+# docs/ — 산출물·민감 자료(사업자등록증, 스크린샷, PPT 등)는 커밋하지 않음.
+# 단 계획/프롬프트 문서는 예외로 추적한다.
+# 주의: `docs/`(디렉토리 제외)로 쓰면 하위 재포함(!)이 무효가 되므로 반드시 `docs/*` 사용.
+docs/*
+!docs/completion-plan.md
+!docs/ppt-opus-prompt.md
+!docs/rename-to-jungaepro-todo.md
