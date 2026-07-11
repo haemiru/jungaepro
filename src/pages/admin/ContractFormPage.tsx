@@ -5,7 +5,7 @@ import { fetchAdminProperties, fetchPropertyById, updatePropertyStatus } from '@
 import { createContract, updateDraftContract, fetchContractById, recommendTemplate } from '@/api/contracts'
 import { Button } from '@/components/common'
 import { formatPropertyPrice, transactionTypeLabel, contractTemplateLabel, formatNumber, parseCommaNumber, formatPhone, parsePhone, formatIdNumber, parseIdNumber, validateIdNumber, formatBusinessNumber, parseBusinessNumber, validateBusinessNumber, formatCorpNumber, parseCorpNumber, validateCorpNumber } from '@/utils/format'
-import { useFormatArea } from '@/components/common/AreaUnitToggle'
+import { useFormatArea } from '@/utils/areaFormat'
 import { useCategories } from '@/hooks/useCategories'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -78,7 +78,7 @@ export function ContractFormPage() {
     if (priceInfo.finalPayment !== finalStr) {
       setPriceInfo((prev) => ({ ...prev, finalPayment: finalStr }))
     }
-  }, [txType, priceInfo.salePrice, priceInfo.deposit, priceInfo.downPayment, priceInfo.midPayment, priceInfo.midPayment2])
+  }, [txType, priceInfo.salePrice, priceInfo.deposit, priceInfo.downPayment, priceInfo.midPayment, priceInfo.midPayment2, priceInfo.finalPayment])
 
   // 잔금 지급일 → 인도일 자동 동기화 (사용자가 직접 수정하지 않은 경우)
   useEffect(() => {
@@ -672,7 +672,7 @@ type PriceInfoType = {
   loanAmount: string
 }
 
-function Step3ContractInfo({ txType, templateType: _templateType, sellerInfo, onSellerChange, buyerInfo, onBuyerChange, priceInfo, onPriceChange, deliveryDate, onDeliveryDateChange, leasePeriodStart, onLeasePeriodStartChange, leasePeriodEnd, onLeasePeriodEndChange, leasePartDesc, onLeasePartDescChange, leasePartArea, onLeasePartAreaChange, monthlyPayDay, onMonthlyPayDayChange, monthlyPayMethod, onMonthlyPayMethodChange, specialTerms, onSpecialTermsChange, property, agentInfo, isJointBrokerage, onJointBrokerageChange, coAgentInfo, onCoAgentInfoChange }: {
+function Step3ContractInfo({ txType, sellerInfo, onSellerChange, buyerInfo, onBuyerChange, priceInfo, onPriceChange, deliveryDate, onDeliveryDateChange, leasePeriodStart, onLeasePeriodStartChange, leasePeriodEnd, onLeasePeriodEndChange, leasePartDesc, onLeasePartDescChange, leasePartArea, onLeasePartAreaChange, monthlyPayDay, onMonthlyPayDayChange, monthlyPayMethod, onMonthlyPayMethodChange, specialTerms, onSpecialTermsChange, property, agentInfo, isJointBrokerage, onJointBrokerageChange, coAgentInfo, onCoAgentInfoChange }: {
   txType: TransactionType; templateType: ContractTemplateType
   sellerInfo: PersonInfo
   onSellerChange: (v: PersonInfo) => void
@@ -1084,7 +1084,7 @@ function getContractTitle(templateType: ContractTemplateType, txType: Transactio
   return `부동산 ${txLabel} 계약서`
 }
 
-function Step4Preview({ property, templateType, txType, sellerInfo, buyerInfo, priceInfo, deliveryDate, leasePeriodStart: _leasePeriodStart, leasePeriodEnd, leasePartDesc, leasePartArea, monthlyPayDay, monthlyPayMethod, specialTerms, agentInfo, isJointBrokerage, coAgentInfo, onGoBack }: {
+function Step4Preview({ property, templateType, txType, sellerInfo, buyerInfo, priceInfo, deliveryDate, leasePeriodEnd, leasePartDesc, leasePartArea, monthlyPayDay, monthlyPayMethod, specialTerms, agentInfo, isJointBrokerage, coAgentInfo, onGoBack }: {
   property: Property | null; templateType: ContractTemplateType; txType: TransactionType
   sellerInfo: PersonInfo
   buyerInfo: PersonInfo

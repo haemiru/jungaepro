@@ -1,6 +1,6 @@
 import type { Property } from '@/types/database'
 import { formatDate, formatPrice } from '@/utils/format'
-import { formatAreaByUnit } from '@/components/common/AreaUnitToggle'
+import { formatAreaByUnit } from '@/utils/areaFormat'
 
 export type InfoFieldDef = {
   key: string

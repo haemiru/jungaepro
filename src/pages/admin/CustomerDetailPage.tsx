@@ -795,9 +795,9 @@ function MatchingTab({ customer, prefs, activities }: { customer: Customer; pref
 
   useEffect(() => {
     let cancelled = false
-    setIsLoading(true)
 
     const load = async () => {
+      setIsLoading(true)
       // 1. 관심 매물: 문의 연결 매물 + 상담일지 태그 매물
       const propertyIds = new Set<string>()
 

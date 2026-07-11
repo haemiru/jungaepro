@@ -21,10 +21,10 @@ export function NearbyTradePrice({ property, categoryName }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    setIsLoading(true)
-    setError(null)
 
     async function load() {
+      setIsLoading(true)
+      setError(null)
       const bjd = await getBjdCodeFromAddress(property.address)
       if (!bjd) { setError('주소에서 법정동 정보를 찾을 수 없습니다.'); setIsLoading(false); return }
       if (!cancelled) setRegionName(bjd.regionName)

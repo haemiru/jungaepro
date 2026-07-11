@@ -16,11 +16,20 @@ export function InspectionListPage() {
   const [showNewModal, setShowNewModal] = useState(false)
 
   useEffect(() => {
-    setIsLoading(true)
-    fetchInspections(statusTab)
-      .then((data) => setInspections(data))
-      .catch(() => setInspections([]))
-      .finally(() => setIsLoading(false))
+    let cancelled = false
+    const load = async () => {
+      setIsLoading(true)
+      try {
+        const data = await fetchInspections(statusTab)
+        if (!cancelled) setInspections(data)
+      } catch {
+        if (!cancelled) setInspections([])
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+    void load()
+    return () => { cancelled = true }
   }, [statusTab])
 
   const tabs: { key: StatusTab; label: string }[] = [

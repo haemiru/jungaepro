@@ -28,28 +28,29 @@ export function PropertyGrid() {
   }, [agentId])
 
   useEffect(() => {
-    setLoading(true)
     let cancelled = false
 
-    fetchProperties({
-      categoryId: selectedCategory || undefined,
-      transactionType: selectedDealType ? dealTypeMap[selectedDealType] : undefined,
-    }, 'newest', 1, 12, agentId ?? undefined)
-      .then(({ data, total }) => {
+    const load = async () => {
+      setLoading(true)
+      try {
+        const { data, total } = await fetchProperties({
+          categoryId: selectedCategory || undefined,
+          transactionType: selectedDealType ? dealTypeMap[selectedDealType] : undefined,
+        }, 'newest', 1, 12, agentId ?? undefined)
         if (!cancelled) {
           setProperties(data)
           setTotal(total)
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) {
           setProperties([])
           setTotal(0)
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false)
-      })
+      }
+    }
+    void load()
 
     return () => { cancelled = true }
   }, [selectedCategory, selectedDealType, agentId])

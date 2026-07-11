@@ -2,7 +2,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import type { Property, PropertyStatus } from '@/types/database'
 import { updatePropertyStatus } from '@/api/properties'
 import { formatPropertyPrice, propertyStatusColor, transactionTypeLabel, formatDate } from '@/utils/format'
-import { AreaUnitToggle, useFormatArea } from '@/components/common/AreaUnitToggle'
+import { AreaUnitToggle } from '@/components/common/AreaUnitToggle'
+import { useFormatArea } from '@/utils/areaFormat'
 import { useCategories } from '@/hooks/useCategories'
 
 interface AdminPropertyTableProps {

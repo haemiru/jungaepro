@@ -13,11 +13,21 @@ export function FavoritesPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) { setIsLoading(false); return }
-    fetchFavoriteProperties()
-      .then(setProperties)
-      .catch(() => setProperties([]))
-      .finally(() => setIsLoading(false))
+    let cancelled = false
+    const load = async () => {
+      if (!user) { setIsLoading(false); return }
+      setIsLoading(true)
+      try {
+        const data = await fetchFavoriteProperties()
+        if (!cancelled) setProperties(data)
+      } catch {
+        if (!cancelled) setProperties([])
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+    void load()
+    return () => { cancelled = true }
   }, [user])
 
   const handleRemove = async (propertyId: string) => {

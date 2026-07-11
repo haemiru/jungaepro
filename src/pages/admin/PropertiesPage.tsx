@@ -50,7 +50,7 @@ export function PropertiesPage() {
     minArea: minArea ? (areaUnit === 'pyeong' ? Number(minArea) * 3.3058 : Number(minArea)) : undefined,
     maxArea: maxArea ? (areaUnit === 'pyeong' ? Number(maxArea) * 3.3058 : Number(maxArea)) : undefined,
     minBuiltYear: undefined,
-  }), [statusTab, search, categoryId, transactionType, minPrice, maxPrice, minArea, maxArea, areaUnit, dateFrom])
+  }), [statusTab, search, categoryId, transactionType, minPrice, maxPrice, minArea, maxArea, areaUnit])
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -67,9 +67,10 @@ export function PropertiesPage() {
 
   useEffect(() => {
     let cancelled = false
-    setIsLoading(true)
-    fetchAdminProperties(buildFilters())
-      .then((data) => {
+    const run = async () => {
+      setIsLoading(true)
+      try {
+        const data = await fetchAdminProperties(buildFilters())
         if (cancelled) return
         setProperties(dateFrom || dateTo ? data.filter((p) => {
           const d = p.created_at?.slice(0, 10) || ''
@@ -78,16 +79,15 @@ export function PropertiesPage() {
           return true
         }) : data)
         setSelectedIds(new Set())
-      })
-      .catch(() => {
-        if (cancelled) return
-        setProperties([])
-      })
-      .finally(() => {
+      } catch {
+        if (!cancelled) setProperties([])
+      } finally {
         if (!cancelled) setIsLoading(false)
-      })
+      }
+    }
+    void run()
     return () => { cancelled = true }
-  }, [statusTab, search, categoryId, transactionType, minPrice, maxPrice, minArea, maxArea, areaUnit, dateFrom, dateTo, buildFilters])
+  }, [buildFilters, dateFrom, dateTo])
 
   const handleResetAdvanced = () => {
     setCategoryId('')
@@ -104,10 +104,10 @@ export function PropertiesPage() {
   const noJeonseCategories = ['토지', '공장', '창고', '공장/창고', '건물', '지식산업센터', '상가', '사무실']
   const isNoJeonse = selectedCategory ? noJeonseCategories.some((n) => selectedCategory.name.includes(n)) : false
 
-  // 전세 불가 유형 선택 시 거래유형이 전세면 초기화
-  useEffect(() => {
-    if (isNoJeonse && transactionType === 'jeonse') setTransactionType('')
-  }, [isNoJeonse, transactionType])
+  // 전세 불가 유형 선택 시 거래유형이 전세면 초기화 (렌더 중 조정 — React 권장 패턴)
+  if (isNoJeonse && transactionType === 'jeonse') {
+    setTransactionType('')
+  }
 
   const activeFilterCount = [categoryId, transactionType, minPrice, maxPrice, minArea, maxArea, dateFrom, dateTo].filter(Boolean).length
 

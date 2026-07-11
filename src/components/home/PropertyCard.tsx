@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Property } from '@/types/database'
 import { formatPropertyPrice, transactionTypeLabel } from '@/utils/format'
-import { useFormatArea } from '@/components/common/AreaUnitToggle'
+import { useFormatArea } from '@/utils/areaFormat'
 
 interface PropertyCardProps {
   property: Property

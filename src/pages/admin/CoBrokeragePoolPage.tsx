@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { fetchSharedProperties, createCoBrokerageRequest } from '@/api/co-brokerage'
 import type { SharedProperty } from '@/types/database'
 import { formatPrice, transactionTypeLabel, formatRelativeTime } from '@/utils/format'
-import { useFormatArea } from '@/components/common/AreaUnitToggle'
+import { useFormatArea } from '@/utils/areaFormat'
 import toast from 'react-hot-toast'
 
 export function CoBrokeragePoolPage() {

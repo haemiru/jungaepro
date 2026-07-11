@@ -7,7 +7,7 @@ import { resolveConditions, type ResolvedConditions } from '@/utils/conditionRes
 import { useCategories } from '@/hooks/useCategories'
 import { useTenantStore } from '@/stores/tenantStore'
 import { formatPropertyPrice, transactionTypeLabel } from '@/utils/format'
-import { useFormatArea } from '@/components/common/AreaUnitToggle'
+import { useFormatArea } from '@/utils/areaFormat'
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'newest', label: '최신등록순' },

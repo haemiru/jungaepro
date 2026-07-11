@@ -11,15 +11,14 @@ export function CategoryTabs() {
 
   // Use specialties from tenant profile (already resolved at init).
   // Show only specialties (in order). Fallback to all categories if none set.
-  const specialties = tenant?.specialties ?? []
-
   const sorted = useMemo(() => {
+    const specialties = tenant?.specialties ?? []
     if (specialties.length === 0) return categories
     const matched = specialties
       .map((s) => categories.find((c) => c.name === s || c.name.includes(s) || s.includes(c.name)))
       .filter(Boolean) as typeof categories
     return matched.length > 0 ? matched : categories
-  }, [categories, specialties])
+  }, [categories, tenant?.specialties])
 
   if (isLoading || sorted.length === 0) return null
 

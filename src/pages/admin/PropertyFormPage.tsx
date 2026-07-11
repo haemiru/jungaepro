@@ -8,7 +8,8 @@ import { uploadPropertyPhoto, deletePropertyPhoto, validateFile } from '@/api/st
 import { getTagBasedConditions, type TagConditionInfo } from '@/utils/conditionResolver'
 import { Button, Input } from '@/components/common'
 import { generateContent } from '@/api/gemini'
-import { KakaoMap, openAddressSearch, geocodeAddress } from '@/components/common/KakaoMap'
+import { KakaoMap } from '@/components/common/KakaoMap'
+import { openAddressSearch, geocodeAddress } from '@/utils/mapAddress'
 import { formatNumber, formatPrice, parseCommaNumber, sqmToPyeong, pyeongToSqm } from '@/utils/format'
 import { AreaUnitToggle } from '@/components/common/AreaUnitToggle'
 import { useAreaUnitStore } from '@/stores/areaUnitStore'
@@ -632,7 +633,7 @@ ${categoryGuide}
     } finally {
       setAiGenerating(false)
     }
-  }, [form, categories])
+  }, [form, categories, catGroup])
 
   const validateTab = (tabId: TabId): string | null => {
     // 렌더링에 사용하는 것과 동일한 catGroup/structVis 참조

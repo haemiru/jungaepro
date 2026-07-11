@@ -48,18 +48,21 @@ export function CustomersPage() {
 
   useEffect(() => {
     let cancelled = false
-    setIsLoading(true)
-    Promise.all([
-      fetchCustomers({ search: search || undefined, source: sourceFilter, customerType: typeFilter }),
-      getCustomerCountByType(),
-    ])
-      .then(([data, countData]) => {
+    const load = async () => {
+      setIsLoading(true)
+      try {
+        const [data, countData] = await Promise.all([
+          fetchCustomers({ search: search || undefined, source: sourceFilter, customerType: typeFilter }),
+          getCustomerCountByType(),
+        ])
         if (cancelled) return
         setCustomers(data)
         setCounts(countData)
-      })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setIsLoading(false) })
+      } catch { /* ignore */ } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+    void load()
     return () => { cancelled = true }
   }, [search, sourceFilter, typeFilter])
 

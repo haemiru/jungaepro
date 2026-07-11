@@ -11,7 +11,8 @@ export function useSessionTimeout() {
   const session = useAuthStore((s) => s.session)
   const navigate = useNavigate()
   const [remainingMs, setRemainingMs] = useState(SESSION_TIMEOUT)
-  const lastActivityRef = useRef(Date.now())
+  // 0으로 초기화 후 effect의 resetTimer()에서 실제 시각 설정 (렌더 중 Date.now() 호출 회피)
+  const lastActivityRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined)
 
   const resetTimer = useCallback(() => {
@@ -21,10 +22,8 @@ export function useSessionTimeout() {
   }, [])
 
   useEffect(() => {
-    if (!session) {
-      setRemainingMs(SESSION_TIMEOUT)
-      return
-    }
+    // 로그인 상태가 아니면 타이머를 돌리지 않는다. 표시값은 아래 effectiveMs에서 처리.
+    if (!session) return
 
     // Initialize
     resetTimer()
@@ -54,9 +53,11 @@ export function useSessionTimeout() {
     }
   }, [session, navigate, resetTimer])
 
-  const minutes = Math.floor(remainingMs / 60000)
-  const seconds = Math.floor((remainingMs % 60000) / 1000)
+  // 로그인 상태가 아니면 항상 전체 시간으로 표시 (state 재설정 없이 파생 계산)
+  const effectiveMs = session ? remainingMs : SESSION_TIMEOUT
+  const minutes = Math.floor(effectiveMs / 60000)
+  const seconds = Math.floor((effectiveMs % 60000) / 1000)
   const formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 
-  return { remainingMs, formatted }
+  return { remainingMs: effectiveMs, formatted }
 }

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { fetchProperties } from '@/api/properties'
 import { useTenantStore } from '@/stores/tenantStore'
 import { formatPropertyPrice, transactionTypeLabel } from '@/utils/format'
-import { useFormatArea } from '@/components/common/AreaUnitToggle'
+import { useFormatArea } from '@/utils/areaFormat'
 import type { Property } from '@/types/database'
 
 export function UrgentCarousel() {
