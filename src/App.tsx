@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { RouterProvider } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import { ErrorBoundary } from './components/common/ErrorBoundary'
 import { router } from './router'
 import { useAuthStore } from './stores/authStore'
 import { useFeatureStore } from './stores/featureStore'
@@ -37,7 +38,7 @@ export default function App() {
   }, [initAuth, initFeatures, initTenant])
 
   return (
-    <>
+    <ErrorBoundary>
       <RouterProvider router={router} />
       <Toaster
         position="top-right"
@@ -46,6 +47,6 @@ export default function App() {
           style: { fontSize: '14px' },
         }}
       />
-    </>
+    </ErrorBoundary>
   )
 }

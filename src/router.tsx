@@ -6,6 +6,7 @@ import { AdminLayout } from '@/layouts/AdminLayout'
 import { ProtectedRoute } from '@/components/common/ProtectedRoute'
 import { PlanGate } from '@/components/common/PlanGate'
 import { TenantGate } from '@/components/common/TenantGate'
+import { RouteError } from '@/components/common/ErrorBoundary'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 // ─── 배포 후 chunk 파일 변경 시 자동 새로고침 ────────────
@@ -113,17 +114,19 @@ export const router = createBrowserRouter([
   {
     path: '/auth',
     element: <AuthLayout />,
+    errorElement: <RouteError />,
     children: [
       { path: 'login', element: <S><LoginPage /></S> },
       { path: 'signup', element: <S><SignupPage /></S> },
     ],
   },
-  { path: '/auth/callback', element: <S><CallbackPage /></S> },
+  { path: '/auth/callback', element: <S><CallbackPage /></S>, errorElement: <RouteError /> },
 
   // User portal (public) — wrapped in TenantGate for multi-tenant routing
   {
     path: '/',
     element: <TenantGate><UserLayout /></TenantGate>,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <S><HomePage /></S> },
       { path: 'search', element: <S><SearchPage /></S> },
@@ -147,6 +150,7 @@ export const router = createBrowserRouter([
         </ProtectedRoute>
       </TenantGate>
     ),
+    errorElement: <RouteError />,
     children: [
       { path: 'dashboard', element: <S><DashboardPage /></S> },
       { path: 'properties', element: <S><PropertiesPage /></S> },
@@ -197,8 +201,8 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Super Admin (email-gated inside component)
-  { path: '/super-admin', element: <S><SuperAdminPage /></S> },
+  // Super Admin (권한은 컴포넌트/라우트 가드에서 확인)
+  { path: '/super-admin', element: <S><SuperAdminPage /></S>, errorElement: <RouteError /> },
 
   // 404
   { path: '*', element: <NotFoundPage /> },
