@@ -24,6 +24,7 @@ const NAV_FEATURE_MAP: Record<string, string[]> = {
   'co-brokerage': ['co_brokerage'],
   inspection: ['inspection'],
   'rental-mgmt': ['rental_mgmt'],
+  legal: ['registry'],
 }
 
 export const useFeatureStore = create<FeatureState>((set, get) => ({

@@ -73,6 +73,7 @@ const RentalDetailPage = lazyWithRetry(() => import('@/pages/admin/RentalDetailP
 const RentalSharePage = lazyWithRetry(() => import('@/pages/admin/RentalSharePage').then((m) => ({ default: m.RentalSharePage })))
 const CoBrokeragePoolPage = lazyWithRetry(() => import('@/pages/admin/CoBrokeragePoolPage').then((m) => ({ default: m.CoBrokeragePoolPage })))
 const CoBrokerageRequestsPage = lazyWithRetry(() => import('@/pages/admin/CoBrokerageRequestsPage').then((m) => ({ default: m.CoBrokerageRequestsPage })))
+const RegistryPage = lazyWithRetry(() => import('@/pages/admin/RegistryPage').then((m) => ({ default: m.RegistryPage })))
 
 // Super Admin
 const SuperAdminPage = lazyWithRetry(() => import('@/pages/super-admin/SuperAdminPage').then((m) => ({ default: m.SuperAdminPage })))
@@ -181,6 +182,7 @@ export const router = createBrowserRouter([
       { path: 'co-brokerage', element: <PlanGate navKey="co-brokerage"><S><CoBrokeragePoolPage /></S></PlanGate> },
       { path: 'co-brokerage/pool', element: <PlanGate navKey="co-brokerage"><S><CoBrokeragePoolPage /></S></PlanGate> },
       { path: 'co-brokerage/requests', element: <PlanGate navKey="co-brokerage"><S><CoBrokerageRequestsPage /></S></PlanGate> },
+      { path: 'legal/registry', element: <S><RegistryPage /></S> },
       {
         path: 'settings',
         element: <S><SettingsLayout /></S>,
