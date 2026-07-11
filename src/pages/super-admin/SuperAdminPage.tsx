@@ -50,8 +50,7 @@ export function SuperAdminPage() {
   const [verifyTarget, setVerifyTarget] = useState<AdminAgent | null>(null)
   const [verifyBusy, setVerifyBusy] = useState(false)
 
-  const email = user?.email ?? ''
-  const isSuperAdmin = email === 'junominu@gmail.com'
+  const isSuperAdmin = user?.is_super_admin === true
 
 
   const loadAgents = async () => {

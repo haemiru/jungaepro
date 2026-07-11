@@ -47,6 +47,7 @@ export function AdminHeader({ onToggleSidebar }: AdminHeaderProps) {
   }
 
   const badgeCount = unreadCount + unansweredInquiryCount
+  const isSuperAdmin = user?.is_super_admin === true
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 lg:px-6">
@@ -153,6 +154,18 @@ export function AdminHeader({ onToggleSidebar }: AdminHeaderProps) {
 
         {/* Profile Inline */}
         <div className="hidden items-center gap-1 border-l border-gray-200 pl-3 sm:flex">
+          {isSuperAdmin && (
+            <Link
+              to="/super-admin"
+              className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+              title="슈퍼관리자 페이지로 이동"
+            >
+              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-2.001A11.954 11.954 0 0110 1.944zM11 14a1 1 0 11-2 0 1 1 0 012 0zm0-7a1 1 0 10-2 0v3a1 1 0 102 0V7z" clipRule="evenodd" />
+              </svg>
+              슈퍼관리자
+            </Link>
+          )}
           {isNavItemPermitted('settings', user?.role, staffPermissions) && (
             <Link
               to="/admin/settings"

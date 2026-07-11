@@ -33,6 +33,7 @@ export type User = {
   display_name: string
   phone: string | null
   avatar_url: string | null
+  is_super_admin: boolean
   created_at: string
 }
 
