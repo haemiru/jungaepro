@@ -1,7 +1,10 @@
 import { corsHeaders } from '../_shared/cors.ts'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
-const FROM_ADDRESS = 'onboarding@resend.dev'
+// 발신 주소: Resend 인증 도메인 주소를 RESEND_FROM 시크릿으로 설정.
+// 미설정 시 onboarding@resend.dev(테스트 발신자, 계정 본인에게만 발송 가능)로 폴백.
+// 예: supabase secrets set RESEND_FROM="중개프로 <noreply@jungaepro.com>"
+const FROM_ADDRESS = Deno.env.get('RESEND_FROM') ?? 'onboarding@resend.dev'
 
 interface RequestBody {
   to: string
