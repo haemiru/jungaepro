@@ -244,7 +244,7 @@ export async function createShareLink(rentalPropertyId: string, expiresInDays: n
   return { token, url: `/admin/rental-mgmt/share/${token}` }
 }
 
-// fetchShareData — public access, keep mock for now (needs SECURITY DEFINER RPC)
+// fetchShareData — 공유 링크용 공개 조회 (RLS 공개 읽기 정책 기반)
 export async function fetchShareData(token: string): Promise<{
   property: RentalProperty
   payments: RentalPayment[]

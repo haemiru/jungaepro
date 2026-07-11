@@ -97,16 +97,16 @@ Each feature lives in `src/features/{name}/` with its own `components/`, `hooks/
 - User portal: FloatingFAB + PropertyDetailPage inquiry modals → `createInquiry()` → shows inquiry number (INQ-YYYYMMDD-NNN)
 - User portal: `/my/inquiries` — inquiry history with expandable reply view
 - Admin portal: `/admin/inquiries` — table with status/type filters, unanswered count badge
-- Admin portal: `/admin/inquiries/:id` — detail with reply form, AI draft placeholder, channel selection (email/alimtalk/SMS)
+- Admin portal: `/admin/inquiries/:id` — detail with reply form, AI draft (Gemini 실구현), channel selection (email/SMS — 알림톡은 카카오 비즈메시지 연동 전까지 숨김), reply draft 임시저장 (localStorage `inquiry-draft-{id}`)
 - Notification store (`src/stores/notificationStore.ts`) — Zustand store for real-time notifications, integrated with AdminHeader bell + AdminSidebar badge
 
 ### CRM (Customer Management)
 
 - `/admin/customers` — dual view: pipeline (kanban board) + list (table)
-- `/admin/customers/:id` — tabs: profile, activity timeline, matching properties (placeholder), consultation records (placeholder), memo
+- `/admin/customers/:id` — tabs: profile, activity timeline, matching properties (문의/상담 연계 + 선호조건 검색, 실구현), consultation records (CRUD 실구현), AI 진성 분석, memo
 - Customer scoring: view +5, favorite +10, inquiry +20, appointment +30, contract_view +40, 7-day inactivity -15
 - Pipeline stages: lead → interest → consulting → contracting → completed
-- Inquiry → CRM auto-linkage via mock API
+- Inquiry → CRM auto-linkage (Supabase 실연동)
 
 ### Contract System
 
@@ -129,13 +129,13 @@ Each feature lives in `src/features/{name}/` with its own `components/`, `hooks/
 - **AI Customer Analysis** — "진성 분석" tab on `/admin/customers/:id`, analyzes activity data, provides sincerity score, conversion probability, recommended actions
 - **Move-in Guide** — admin generates via contract tracker for lease contracts, user views at `/my/move-in-guide/:contractId`
 - Generation logs saved to `ai_generation_logs` table
-- API key: `VITE_GEMINI_API_KEY` env var
+- API key는 Supabase secret(`GEMINI_API_KEY`) — 클라이언트 env에 두지 않는다
 
 ### Data Analytics (Recharts)
 
 - **Market Info** (`/market-info` user, `/admin/analytics/valuation` admin) — complex price trend line chart (6mo/1yr/3yr), pyeong comparison bar chart, fair value band chart (ComposedChart with Area+Line), regional price summary table
 - **ROI Calculator** (`/admin/analytics/roi`) — real-time calculation: ROI, Cap Rate, monthly cashflow, break-even point. Inputs: purchase price, loan ratio, interest rate, deposit, monthly rent, taxes, vacancy rate, holding period. Leverage comparison bar chart, cumulative profit line chart
-- **Location Analysis** (`/admin/analytics/location`) — address input → 6 category score bars (transport/school/amenity/foot_traffic/development/safety), grade A+~F, PDF download, share link
+- **Location Analysis** (`/admin/analytics/location`) — address input → 6 category score bars (transport/school/amenity/foot_traffic/development/safety), grade A+~F, PDF download (jspdf + html2canvas-pro), share link
 - **Buy/Sell Signal** (`/admin/analytics/signal`) — traffic light system (🟢매수적기/🟡관망/🔴매도적기), 5 weighted indicators (txVolume 25%, priceChange 25%, supplyChange 20%, interestRate 15%, unsold 15%), weighted average → threshold-based color, Seoul 12 districts + Gyeonggi 8 cities mock data
 - Mock data in `src/utils/marketMockData.ts` — complexes, price trends, pyeong comparisons, fair value ranges, location profiles, signal seeds, regional summaries
 
@@ -143,10 +143,10 @@ Each feature lives in `src/features/{name}/` with its own `components/`, `hooks/
 
 - **Inspection List** (`/admin/inspection`) — scheduled/in-progress/completed tabs, new inspection modal (property selection or manual input)
 - **Checklist** (`/admin/inspection/:id/checklist`) — mobile-optimized UI with large touch targets, 7 categories (구조/외관, 내부 상태, 수도/배관, 전기/가스, 창호/방범, 옵션/가전, 주차/환경), 23 check items
-  - Each item: 양호/보통/불량 status + note + photo placeholder
+  - Each item: 양호/보통/불량 status + note + 사진 첨부 (Supabase Storage 업로드, 항목별 1장)
   - Progress bar, offline detection (navigator.onLine), auto-save
 - **Report** (`/admin/inspection/:id/report`) — auto-generated on completion, grade A~F based on good/normal/bad ratios, category breakdown bar chart, attention items list, AI analysis via Gemini
-- Mock API in `src/api/inspections.ts` — checklist template, grade calculation, CRUD
+- `src/api/inspections.ts` — Supabase `inspections` 테이블 실연동 (checklist template·grade calculation은 순수 함수)
 
 ### Rental Management (임대 관리)
 
@@ -154,13 +154,12 @@ Each feature lives in `src/features/{name}/` with its own `components/`, `hooks/
 - **Detail** (`/admin/rental-mgmt/:id`) — tenant/contract info, payment history table + bar chart (Recharts), repair request tickets with status management
 - **Landlord Share** (`/admin/rental-mgmt/share/:token`) — read-only public page via token-based share link (30-day expiry), shows payment history, repairs, contract info
 - DB tables: `rental_properties`, `rental_payments`, `repair_requests`, `rental_share_links`
-- Mock API in `src/api/rental.ts` — 5 properties, auto-generated payment history, repair requests, share link system
+- `src/api/rental.ts` — Supabase 실연동 (수납/수리/공유 링크)
 
 ### Legal/Administrative (법률 행정)
 
-- **Registry Check** (`/admin/legal/registry`) — address input → mock 등기부등본 lookup, 갑구(소유권)/을구(제한물권) tables, risk highlighting (가압류=danger, 근저당=caution), summary analysis
-- **E-Signature** — placeholder on contract tracker (`전자서명 요청` button), signature status display (미서명/서명중/완료), future 카카오/네이버 API integration
-- Mock API in `src/api/legal.ts` — registry lookup, signature request/status
+- **등기부등본 관리** (`/admin/legal/registry`) — 인터넷등기소에서 발급받은 PDF 업로드·보관·열람·삭제 (Supabase Storage). 문서 목록은 localStorage(`registry-docs`) 기반. 등기부 **조회 API 연동은 향후 업그레이드** (CODEF/하이픈 — docs/completion-plan.md 참조)
+- **E-Signature** — 범위 제외 (사용자 결정). ContractTrackerPage에 UI 주석 상태로 보존, 설정 화면에서도 숨김. `src/api/legal.ts`의 mock(`lookupRegistry`/`requestSignature`)은 미사용 상태로 유지
 
 ### Co-Brokerage (공동중개)
 
@@ -200,14 +199,34 @@ Each feature lives in `src/features/{name}/` with its own `components/`, `hooks/
 - AdminSidebar filters nav items based on feature store state
 - Initialized in `App.tsx` alongside auth store
 
-### Mock API Pattern
+### API 연동 현황
 
-All API modules (`src/api/`) use in-memory mock data for development. Each exports async functions that simulate Supabase calls. Replace with actual Supabase client calls when backend is connected.
+`src/api/`의 22개 모듈 중 21개가 **실제 Supabase 연동**이다 (Auth·DB·Storage·Edge Functions). Edge Functions 4종: `generate-content`(Gemini), `send-email`(Resend), `real-trade-price`(국토부 실거래가 + `real_trade_cache`), `naver-news`. dev에서는 Vite proxy(`/api/*`), prod에서는 Edge Function 직접 호출로 서버 키를 보호한다.
+
+**mock으로 남아 있는 부분** (외부 연동 대기 — docs/completion-plan.md Phase 4 참조):
+- `src/api/legal.ts` — 등기부 조회(`lookupRegistry`)·전자서명. 현재 미사용 (UI 숨김)
+- `src/api/settings.ts`의 `fetchBillingInfo` — 결제 이력/다음 결제일 하드코딩. PG(토스페이먼츠) 연동 시 교체
+- `src/utils/marketMockData.ts` — 시세/시그널/입지분석 데이터 (화면에 "목업 데이터" 명시)
+
+### Error Handling
+
+- 전역: `src/components/common/ErrorBoundary.tsx` — 클래스 `ErrorBoundary`(App 래핑) + `RouteError`(router errorElement). 렌더 예외 시 한국어 안내 화면
+- 국소: try/catch + `react-hot-toast` 패턴 (36개 파일, 199곳)
+
+### Super Admin
+
+- `users.is_super_admin` 플래그 기반 (마이그레이션 00027). 클라이언트(`AdminHeader`, `SuperAdminPage`)와 서버 RPC(`admin_get_all_agents` 등 3종, `is_super_admin()` 헬퍼)가 동일 기준. 이메일 하드코딩 없음
+- `/super-admin` — 전체 중개사 목록, 요금제 변경, 사무소 인증 토글 + 승인 안내 메일
 
 ### Performance
 
-- **Code splitting**: all pages use `React.lazy()` + `Suspense` with shared `PageLoader` fallback. Main bundle ~531KB (gzip ~158KB), pages split into ~60 chunks
+- **Code splitting**: all pages use `React.lazy()` + `Suspense` with shared `PageLoader` fallback. Main bundle ~560KB (gzip ~168KB), pages split into ~60 chunks
+- 지역 지도 SVG 데이터(`src/data/regionMaps.ts`, ~1.2MB)는 `RegionMapCard`에서 동적 import + React 19 `use()`로 분리 — 홈에서 지역 카드가 렌더될 때만 별도 청크로 로드
 - Bundle chunks: vendor (react/react-dom), recharts (BarChart/LineChart), and individual page modules
+
+### Maps
+
+`src/components/common/KakaoMap.tsx`는 이름과 달리 **Leaflet + OpenStreetMap 타일** 기반이다 (매물 등록/상세의 위치 지도). 주소 검색은 Daum Postcode SDK, 지오코딩은 Kakao REST(`/api/geocode` proxy) — 유틸은 `src/utils/mapAddress.ts`. 검색 페이지의 지도 보기는 Phase 4-3에서 추가 예정 (현재 숨김).
 
 ### Path Aliases
 

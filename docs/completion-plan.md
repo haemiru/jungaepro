@@ -165,6 +165,18 @@
 
 **사용자 조치 필요**:
 1. ~~`00027_super_admin_flag.sql` 원격 Supabase 적용~~ — **완료(2026-07-11, 사용자 실행)**. 재로그인 시 슈퍼관리자 접근 복원됨.
+
+### Phase 1 검증 완료 (2026-07-11, Fable)
+- 4개 리스크 지점(set-state 리팩터링/RegionMapCard use()/ErrorBoundary/00027) 전부 통과. 홈·검색 런타임 스모크(dev 서버 + 브라우저) 콘솔 오류 0, regionMaps 동적 로드 확인.
+- **갭 1건 발견·수정**: `.gitignore`의 `docs/` 디렉토리 제외 패턴은 하위 재포함(`!`)이 무효 → `docs/*`로 교정 (check-ignore 검증). `.bkit/` ignore 추가.
+- 5개 커밋으로 푸시 완료 (`eb0e183`~`214e6b3`).
+
+### Phase 2 완료 (2026-07-11, Fable 이어서 실행)
+- **구현 3건**: ① 문의 답변 임시저장 — localStorage `inquiry-draft-{id}` 저장/복원/발송 후 삭제. ② 임장 체크리스트 사진 첨부 — `uploadInspectionPhoto()`(storage.ts 신규, `{agentId}/inspection/` 경로) + 항목별 첨부/썸네일/삭제, `checklist[].photo`로 DB 저장. ③ 위치분석 PDF 다운로드 — jspdf + html2canvas-pro 동적 import, 면책 문구 포함 캡처.
+- **숨김 5건**: 알림톡 채널(문의 답변), 유저 임장 예약 버튼(문의하기로 통합), 맞춤매물 추천 발송/상담 스크립트 버튼, 검색페이지 지도 보기 토글(Phase 4-3에서 복원), 설정의 전자서명(기능 목록 + 연동 목록, 저장된 설정도 fetch 시 필터).
+- **RegistryPage**: `/admin/legal/registry` 라우트 연결 + 사이드바 "등기부등본" 항목(⚖️) + featureStore `legal→registry` 매핑. 페이지는 이미 업로드·보관 전용이었음(mock 조회 UI 없음 — 조사 시점 이후 정리된 상태).
+- **문서**: CLAUDE.md 갱신 — "Mock API Pattern" 섹션을 "API 연동 현황"(실연동 21/22 + 잔여 mock 목록)으로 교체, AI/CRM/문의/임장/임대/법률 섹션의 stale "placeholder" 표기 정정, Error Handling·Super Admin·Maps(KakaoMap=Leaflet) 섹션 신설, `VITE_GEMINI_API_KEY` 오기재 수정. `rental.ts`·`CustomerDetailPage.tsx` stale 주석 정리.
+- 검증: `npm run lint` 0, `tsc` 0, `npm run build` 통과 (RegistryPage 청크 5.96KB 생성 확인).
 2. ~~`.env` 실키 로테이션~~ — **불필요로 정정(2026-07-11)**. git 전체 히스토리에 `.env`가 커밋된 적 없고, 실키 문자열도 히스토리·번들 어디에도 노출되지 않음을 확인. 노출 경로가 없으므로 로테이션 불필요. (다른 경로로 키가 유출된 정황이 있을 때만 로테이션.)
 
 ## 권장 실행 순서
