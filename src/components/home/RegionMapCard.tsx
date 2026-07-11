@@ -1,5 +1,4 @@
-import { useMemo } from 'react'
-import { regionMaps, regionParents } from '@/data/regionMaps'
+import { use, useMemo } from 'react'
 import type { RegionMapData } from '@/data/regionMaps'
 
 type Props = {
@@ -7,6 +6,19 @@ type Props = {
   nameEn?: string
   selected: boolean
   onClick: () => void
+}
+
+/* ── 지역 지도 데이터(약 1.2MB SVG path)는 동적 import로 분리해
+      RegionMapCard 컴포넌트 청크에서 제외하고, 카드가 실제 렌더될 때만
+      별도 캐시 가능한 청크로 로드한다. 모듈 레벨에서 프로미스를 캐시해
+      여러 카드가 한 번의 로드를 공유한다. ── */
+
+type RegionModule = typeof import('@/data/regionMaps')
+let regionDataPromise: Promise<RegionModule> | null = null
+
+function loadRegionData(): Promise<RegionModule> {
+  if (!regionDataPromise) regionDataPromise = import('@/data/regionMaps')
+  return regionDataPromise
 }
 
 /* ── SVG path bounding box helper ── */
@@ -47,7 +59,11 @@ function buildCityMap(cityPrefix: string, parentData: RegionMapData): RegionMapD
 
 const cityMapCache: Record<string, RegionMapData> = {}
 
-function getCityMap(cityPrefix: string): RegionMapData | null {
+function getCityMap(
+  cityPrefix: string,
+  regionMaps: RegionModule['regionMaps'],
+  regionParents: RegionModule['regionParents'],
+): RegionMapData | null {
   if (cityMapCache[cityPrefix]) return cityMapCache[cityPrefix]
   for (const [region, parent] of Object.entries(regionParents)) {
     if (region.startsWith(cityPrefix + ' ') && /구$/.test(region)) {
@@ -66,13 +82,17 @@ function getCityMap(cityPrefix: string): RegionMapData | null {
 
 /* ── Region → map data lookup ── */
 
-function findMap(name: string): { data: RegionMapData; highlights: string[] } | null {
+function findMap(
+  name: string,
+  regionMaps: RegionModule['regionMaps'],
+  regionParents: RegionModule['regionParents'],
+): { data: RegionMapData; highlights: string[] } | null {
   // 1. Exact match in regionParents (e.g. "청주시 흥덕구" → "충청북도")
   //    But if it's a "시 구" pattern, show city-level map instead of province
   if (regionParents[name]) {
     const cityMatch = name.match(/^(.+시)\s+.+구$/)
     if (cityMatch) {
-      const cityMap = getCityMap(cityMatch[1])
+      const cityMap = getCityMap(cityMatch[1], regionMaps, regionParents)
       if (cityMap) return { data: cityMap, highlights: [name] }
     }
     const d = regionMaps[regionParents[name]]
@@ -99,7 +119,7 @@ function findMap(name: string): { data: RegionMapData; highlights: string[] } | 
     if (region.startsWith(name) || name.startsWith(region)) {
       // If "XX시" matches "XX시 YY구", build a city-level map
       if (/시$/.test(name)) {
-        const cityMap = getCityMap(name)
+        const cityMap = getCityMap(name, regionMaps, regionParents)
         if (cityMap) {
           const hl = Object.keys(cityMap.regions).filter(r => r.startsWith(name))
           if (hl.length > 0) return { data: cityMap, highlights: hl }
@@ -119,7 +139,7 @@ function findMap(name: string): { data: RegionMapData; highlights: string[] } | 
     if (region.endsWith(name) || region.includes(name)) {
       const cityMatch = region.match(/^(.+시)\s+.+구$/)
       if (cityMatch) {
-        const cityMap = getCityMap(cityMatch[1])
+        const cityMap = getCityMap(cityMatch[1], regionMaps, regionParents)
         if (cityMap) {
           const hl = Object.keys(cityMap.regions).filter(r => r.endsWith(name) || r.includes(name))
           if (hl.length > 0) return { data: cityMap, highlights: hl }
@@ -154,7 +174,12 @@ function findMap(name: string): { data: RegionMapData; highlights: string[] } | 
 /* ── Component ── */
 
 export function RegionMapCard({ name, nameEn, selected, onClick }: Props) {
-  const match = useMemo(() => findMap(name), [name])
+  // 캐시된 프로미스를 use()로 소비 → 데이터 로딩 동안 부모 Suspense fallback 표시
+  const { regionMaps, regionParents } = use(loadRegionData())
+  const match = useMemo(
+    () => findMap(name, regionMaps, regionParents),
+    [name, regionMaps, regionParents],
+  )
 
   if (!match) return null
 
