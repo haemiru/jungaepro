@@ -86,6 +86,52 @@ export async function uploadLogo(file: File, agentId: string): Promise<string> {
   return `${data.publicUrl}?t=${Date.now()}`
 }
 
+// ── 임장 체크리스트 사진 업로드 ──
+
+export async function uploadInspectionPhoto(file: File, agentId: string): Promise<string> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).slice(2, 8)
+  const path = `${agentId}/inspection/${timestamp}-${random}.${ext}`
+
+  const raw = localStorage.getItem('jungaepro-auth')
+  const token = raw ? (JSON.parse(raw) as { access_token?: string }).access_token : null
+  if (!token) throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해주세요.')
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const uploadUrl = `${supabaseUrl}/storage/v1/object/${BUCKET}/${path}`
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT)
+
+  try {
+    const resp = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Cache-Control': '3600',
+        'Content-Type': file.type,
+      },
+      body: file,
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}))
+      throw new Error((body as Record<string, string>).message || `업로드 실패 (HTTP ${resp.status})`)
+    }
+  } catch (e) {
+    clearTimeout(timeoutId)
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error('업로드 시간 초과 (30초)')
+    }
+    throw e
+  }
+
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  return data.publicUrl
+}
+
 // ── 등기부등본 PDF 업로드 ──
 
 const DOC_MAX_SIZE = 20 * 1024 * 1024 // 20MB

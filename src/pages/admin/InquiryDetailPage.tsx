@@ -10,7 +10,6 @@ import { sendEmail } from '@/api/email'
 import { Button } from '@/components/common'
 import { inquiryStatusLabel, inquiryStatusIcon, inquiryStatusColor, inquiryTypeLabel, formatDateTime, formatPropertyPrice } from '@/utils/format'
 import { useAuthStore } from '@/stores/authStore'
-import { isFeatureInPlan } from '@/config/planFeatures'
 import toast from 'react-hot-toast'
 
 export function InquiryDetailPage() {
@@ -57,6 +56,13 @@ export function InquiryDetailPage() {
         findCustomerByPhone(inq.phone).then((c) => {
           if (!cancelled) setLinkedCustomer(c)
         }).catch(() => {})
+      }
+
+      // 임시저장된 답변 복원
+      const draft = localStorage.getItem(`inquiry-draft-${id}`)
+      if (draft) {
+        setReplyContent(draft)
+        toast('임시저장된 답변을 불러왔습니다.', { icon: '📝' })
       }
     })
       .catch(() => {})
@@ -123,12 +129,8 @@ export function InquiryDetailPage() {
         results.push('문자 앱 열림')
       }
 
-      // Alimtalk: placeholder
-      if (sentVia.has('alimtalk')) {
-        results.push('알림톡 (미연동)')
-      }
-
       setReplyContent('')
+      if (id) localStorage.removeItem(`inquiry-draft-${id}`)
       toast.success(`답변 저장 완료${results.length ? '. ' + results.join(', ') : ''}`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '답변 발송에 실패했습니다.')
@@ -138,7 +140,13 @@ export function InquiryDetailPage() {
   }
 
   const handleSaveDraft = () => {
-    toast.success('답변이 임시저장되었습니다.')
+    if (!id) return
+    if (!replyContent.trim()) {
+      toast.error('저장할 답변 내용이 없습니다.')
+      return
+    }
+    localStorage.setItem(`inquiry-draft-${id}`, replyContent)
+    toast.success('답변이 임시저장되었습니다. 페이지를 다시 열면 자동으로 불러옵니다.')
   }
 
   const handleStatusChange = async (status: InquiryStatus) => {
@@ -317,10 +325,9 @@ ${inquiry.preferred_visit_date ? `\n희망 방문일: ${inquiry.preferred_visit_
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             />
 
-            {/* Send channels */}
+            {/* Send channels — 알림톡은 카카오 비즈메시지 연동(Phase 4-2) 후 노출 */}
             {(() => {
               const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-              const alimtalkAvailable = agentProfile ? isFeatureInPlan('ai_chatbot', agentProfile.subscription_plan) : false
               return (
                 <div className="mt-3 flex flex-wrap items-center gap-4">
                   <p className="text-xs font-medium text-gray-500">발송 채널:</p>
@@ -349,25 +356,6 @@ ${inquiry.preferred_visit_date ? `\n희망 방문일: ${inquiry.preferred_visit_
                       className={`h-4 w-4 rounded border-gray-300 ${isMobile ? 'text-primary-600' : 'text-gray-300'}`}
                     />
                     SMS
-                  </label>
-                  {/* 알림톡: Basic+ 플랜에서만 활성 */}
-                  <label className={`flex items-center gap-1.5 text-sm ${alimtalkAvailable ? 'text-gray-600' : 'text-gray-400'}`}>
-                    <input
-                      type="checkbox"
-                      checked={sentVia.has('alimtalk')}
-                      onChange={() => {
-                        if (alimtalkAvailable) {
-                          toggleChannel('alimtalk')
-                        } else {
-                          toast('알림톡은 Basic 이상 플랜에서 사용 가능합니다.', { icon: '🔒' })
-                        }
-                      }}
-                      className={`h-4 w-4 rounded border-gray-300 ${alimtalkAvailable ? 'text-primary-600' : 'text-gray-300'}`}
-                    />
-                    알림톡
-                    {!alimtalkAvailable && (
-                      <span className="rounded bg-gray-100 px-1 py-0.5 text-[10px] text-gray-400">Basic+</span>
-                    )}
                   </label>
                 </div>
               )

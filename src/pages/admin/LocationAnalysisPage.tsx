@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { analyzeLocation } from '@/utils/marketMockData'
 import type { LocationAnalysis } from '@/utils/marketMockData'
 import { Button } from '@/components/common'
@@ -34,7 +34,9 @@ const categoryIcon: Record<string, string> = {
 export function LocationAnalysisPage() {
   const [address, setAddress] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isPdfLoading, setIsPdfLoading] = useState(false)
   const [result, setResult] = useState<LocationAnalysis | null>(null)
+  const reportRef = useRef<HTMLDivElement>(null)
 
   const presetAddresses = [
     '서울 강남구 대치동 123',
@@ -57,8 +59,35 @@ export function LocationAnalysisPage() {
     setIsAnalyzing(false)
   }
 
-  const handlePDFDownload = () => {
-    toast.success('PDF 다운로드 기능은 추후 구현 예정입니다.')
+  const handlePDFDownload = async () => {
+    if (!reportRef.current || !result) return
+    setIsPdfLoading(true)
+    try {
+      const html2canvas = (await import('html2canvas-pro')).default
+      const { jsPDF } = await import('jspdf')
+      const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: '#f9fafb' })
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfW = pdf.internal.pageSize.getWidth()
+      const pdfH = pdf.internal.pageSize.getHeight()
+      const margin = 10
+      const contentW = pdfW - margin * 2
+      const imgH = (canvas.height * contentW) / canvas.width
+      let y = margin
+      let page = 0
+      while (y < imgH + margin) {
+        if (page > 0) pdf.addPage()
+        pdf.addImage(imgData, 'PNG', margin, margin - y + (page === 0 ? 0 : margin), contentW, imgH)
+        y += pdfH - margin * 2
+        page++
+      }
+      pdf.save(`입지분석_${result.address.replace(/\s+/g, '_')}.pdf`)
+      toast.success('PDF가 다운로드되었습니다.')
+    } catch {
+      toast.error('PDF 생성에 실패했습니다.')
+    } finally {
+      setIsPdfLoading(false)
+    }
   }
 
   const handleShareLink = () => {
@@ -105,6 +134,8 @@ export function LocationAnalysisPage() {
       {/* Results */}
       {result && (
         <div className="space-y-6">
+          {/* PDF 캡처 영역: 점수 카드 + 항목별 분석 + 그리드 + 면책 문구 */}
+          <div ref={reportRef} className="space-y-6">
           {/* Total Score Card */}
           <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -182,22 +213,23 @@ export function LocationAnalysisPage() {
             ))}
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={handlePDFDownload} variant="outline">
-              PDF 다운로드
-            </Button>
-            <Button onClick={handleShareLink} variant="outline">
-              고객 공유 링크 생성
-            </Button>
-          </div>
-
-          {/* Disclaimer */}
+          {/* Disclaimer — PDF에도 포함 */}
           <div className="rounded-lg bg-amber-50 p-3">
             <p className="text-xs text-amber-700">
               본 분석 결과는 목업 데이터 기반이며, 실제 투자 판단의 근거로 사용할 수 없습니다.
               정확한 입지 분석은 현장 확인과 전문가 자문을 권장합니다.
             </p>
+          </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={handlePDFDownload} variant="outline" isLoading={isPdfLoading}>
+              PDF 다운로드
+            </Button>
+            <Button onClick={handleShareLink} variant="outline">
+              고객 공유 링크 생성
+            </Button>
           </div>
         </div>
       )}

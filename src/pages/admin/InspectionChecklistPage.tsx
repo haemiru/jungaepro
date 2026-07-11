@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchInspectionById, completeInspection, updateInspection, checklistTemplate } from '@/api/inspections'
+import { uploadInspectionPhoto, deleteStorageFile, validateFile } from '@/api/storage'
+import { useAuthStore } from '@/stores/authStore'
 import type { Inspection, InspectionCheckItem, CheckItemStatus } from '@/types/database'
 import { checkItemStatusLabel, checkItemStatusColor } from '@/utils/format'
 import toast from 'react-hot-toast'
@@ -8,6 +10,7 @@ import toast from 'react-hot-toast'
 export function InspectionChecklistPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const agentProfile = useAuthStore((s) => s.agentProfile)
   const [inspection, setInspection] = useState<Inspection | null>(null)
   const [checklist, setChecklist] = useState<InspectionCheckItem[]>([])
   const [overallComment, setOverallComment] = useState('')
@@ -55,6 +58,19 @@ export function InspectionChecklistPage() {
   const updateItemNote = (itemId: string, note: string) => {
     setChecklist((prev) =>
       prev.map((item) => (item.id === itemId ? { ...item, note } : item)),
+    )
+  }
+
+  const uploadItemPhoto = async (file: File): Promise<string> => {
+    if (!agentProfile) throw new Error('사무소 정보를 불러올 수 없습니다.')
+    const validationError = validateFile(file)
+    if (validationError) throw new Error(validationError)
+    return uploadInspectionPhoto(file, agentProfile.id)
+  }
+
+  const updateItemPhoto = (itemId: string, photo: string | null) => {
+    setChecklist((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, photo } : item)),
     )
   }
 
@@ -163,6 +179,8 @@ export function InspectionChecklistPage() {
                       item={item}
                       onStatusChange={(status) => updateItemStatus(item.id, status)}
                       onNoteChange={(note) => updateItemNote(item.id, note)}
+                      onUploadPhoto={uploadItemPhoto}
+                      onPhotoChange={(photo) => updateItemPhoto(item.id, photo)}
                     />
                   ))}
                 </div>
@@ -209,13 +227,42 @@ function ChecklistItem({
   item,
   onStatusChange,
   onNoteChange,
+  onUploadPhoto,
+  onPhotoChange,
 }: {
   item: InspectionCheckItem
   onStatusChange: (status: CheckItemStatus) => void
   onNoteChange: (note: string) => void
+  onUploadPhoto: (file: File) => Promise<string>
+  onPhotoChange: (photo: string | null) => void
 }) {
   const [showNote, setShowNote] = useState(!!item.note)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const statuses: CheckItemStatus[] = ['good', 'normal', 'bad']
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // 같은 파일 재선택 허용
+    if (!file) return
+    setIsUploading(true)
+    try {
+      const url = await onUploadPhoto(file)
+      onPhotoChange(url)
+      toast.success('사진이 첨부되었습니다.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '사진 업로드에 실패했습니다.')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleRemovePhoto = () => {
+    const url = item.photo
+    onPhotoChange(null)
+    if (url) deleteStorageFile(url).catch(() => {}) // 스토리지 정리는 best-effort
+    toast.success('사진을 삭제했습니다.')
+  }
 
   return (
     <div className="border-b border-gray-50 py-3 last:border-0">
@@ -238,7 +285,7 @@ function ChecklistItem({
         </div>
       </div>
 
-      {/* Note toggle + Photo placeholder */}
+      {/* Note toggle + Photo attach */}
       <div className="mt-1.5 flex items-center gap-2">
         <button
           onClick={() => setShowNote(!showNote)}
@@ -246,10 +293,42 @@ function ChecklistItem({
         >
           {showNote ? '메모 닫기' : '+ 메모'}
         </button>
-        <button className="text-xs text-gray-400 hover:text-gray-600">
-          + 사진
-        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+        {!item.photo && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-50"
+          >
+            {isUploading ? '업로드 중...' : '+ 사진'}
+          </button>
+        )}
       </div>
+
+      {item.photo && (
+        <div className="mt-2 flex items-start gap-2">
+          <a href={item.photo} target="_blank" rel="noreferrer">
+            <img
+              src={item.photo}
+              alt={`${item.label} 점검 사진`}
+              className="h-20 w-20 rounded-lg border border-gray-200 object-cover"
+            />
+          </a>
+          <button
+            onClick={handleRemovePhoto}
+            className="rounded px-1.5 py-1 text-xs text-gray-400 hover:bg-red-50 hover:text-red-500"
+          >
+            삭제
+          </button>
+        </div>
+      )}
 
       {showNote && (
         <textarea
