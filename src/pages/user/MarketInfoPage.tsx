@@ -182,7 +182,11 @@ export function MarketInfoPage() {
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        <p className="mt-2 text-xs text-gray-400">적정 시세 범위는 해당 기간 실거래의 월별 최저·최고가를 기반으로 표시됩니다.</p>
+        <p className="mt-2 text-xs text-gray-400">
+          {dataSource === 'real'
+            ? '적정 시세 범위는 해당 기간 국토부 실거래가의 월별 최저·최고가를 기반으로 표시됩니다.'
+            : '적정 시세 범위는 추정 데이터 기반이며, 참고용입니다.'}
+        </p>
       </div>
 
       {/* Buy/Sell Signals Section */}
@@ -241,6 +245,9 @@ export function MarketInfoPage() {
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-[10px] text-gray-400">
+          지역별 평당가는 참고용 추정치이며, 단지별 실거래가(위 차트)와 다를 수 있습니다.
+        </p>
       </div>
     </div>
   )

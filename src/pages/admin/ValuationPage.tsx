@@ -58,9 +58,11 @@ export function ValuationPage() {
     ? complexList.filter((c) => c.name.includes(searchQuery) || c.region.includes(searchQuery))
     : complexList
 
-  const mergedTrendData = trendData.map((d, i) => ({
+  // date 키로 병합 — 실거래는 거래 있는 달만 존재해 배열 인덱스가 어긋날 수 있음
+  const compareByDate = new Map((compareTrend ?? []).map((c) => [c.date, c.avgPrice]))
+  const mergedTrendData = trendData.map((d) => ({
     ...d,
-    comparePrice: compareTrend?.[i]?.avgPrice ?? null,
+    comparePrice: compareByDate.get(d.date) ?? null,
   }))
 
   // 적정 시세 범위: 실거래 월별 최저·평균·최고가 기반
@@ -249,7 +251,11 @@ export function ValuationPage() {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-[10px] text-gray-400">적정 시세 범위는 해당 기간 실거래의 월별 최저·최고가를 기반으로 표시됩니다.</p>
+          <p className="mt-2 text-[10px] text-gray-400">
+            {dataSource === 'real'
+              ? '적정 시세 범위는 해당 기간 국토부 실거래가의 월별 최저·최고가를 기반으로 표시됩니다.'
+              : '적정 시세 범위는 추정 데이터 기반이며, 참고용입니다.'}
+          </p>
         </div>
       </div>
 

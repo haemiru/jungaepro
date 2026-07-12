@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
       LAWD_CD: lawdCd,
       DEAL_YMD: dealYmd,
       pageNo: '1',
-      numOfRows: '100',
+      numOfRows: '1000', // 거래 많은 시군구(예: 강남구) 월간 표본 절단 방지
     })
 
     const res = await fetch(`${endpoint}?${params}`)

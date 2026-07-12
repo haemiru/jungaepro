@@ -204,19 +204,28 @@ function molitProxy(): PluginOption {
           return
         }
 
-        const params = new URLSearchParams({ serviceKey: apiKey, LAWD_CD: lawdCd, DEAL_YMD: dealYmd, pageNo: '1', numOfRows: '100' })
+        const params = new URLSearchParams({ serviceKey: apiKey, LAWD_CD: lawdCd, DEAL_YMD: dealYmd, pageNo: '1', numOfRows: '1000' })
 
         try {
           const resp = await fetch(`${endpoint}?${params}`)
           const xml = await resp.text()
+
+          const tag = (src: string, t: string) => { const m = src.match(new RegExp(`<${t}>([\\s\\S]*?)</${t}>`)); return m ? m[1].trim() : '' }
+
+          // #7: Edge Function과 동일하게 resultCode 검사 — dev에서 키/쿼터 오류를 빈 결과로 위장하지 않도록
+          const resultCode = tag(xml, 'resultCode')
+          if (resultCode && resultCode !== '00' && resultCode !== '000') {
+            const resultMsg = tag(xml, 'resultMsg')
+            res.writeHead(502, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: `국토부 API 오류: ${resultMsg} (${resultCode})` }))
+            return
+          }
 
           // Parse XML items
           const items: Record<string, unknown>[] = []
           const itemRegex = /<item>([\s\S]*?)<\/item>/g
           let match: RegExpExecArray | null
           const isRent = apiType.includes('rent')
-
-          const tag = (src: string, t: string) => { const m = src.match(new RegExp(`<${t}>([\\s\\S]*?)</${t}>`)); return m ? m[1].trim() : '' }
 
           while ((match = itemRegex.exec(xml)) !== null) {
             const it = match[1]
