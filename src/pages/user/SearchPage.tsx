@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { Property, TransactionType } from '@/types/database'
 import { fetchProperties, type SortOption, type PropertyFilters } from '@/api/properties'
@@ -18,6 +18,11 @@ const sortOptions: { value: SortOption; label: string }[] = [
 ]
 
 const directionOptions = ['남향', '남동향', '남서향', '동향', '서향', '북향']
+
+// Leaflet 지도는 무거우므로 지도 보기 선택 시에만 로드
+const PropertyMapView = lazy(() =>
+  import('@/components/property/PropertyMapView').then((m) => ({ default: m.PropertyMapView })),
+)
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -44,6 +49,7 @@ export function SearchPage() {
   const [rooms, setRooms] = useState('')
   const [direction, setDirection] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
 
   const pageSize = 12
   const totalPages = Math.ceil(total / pageSize)
@@ -265,12 +271,28 @@ export function SearchPage() {
           <select value={sort} onChange={(e) => setSort(e.target.value as SortOption)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm">
             {sortOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+          <div className="flex overflow-hidden rounded-lg border border-gray-200">
+            <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 text-xs font-medium ${viewMode === 'list' ? 'bg-gray-100 text-gray-900' : 'text-gray-500'}`}>목록</button>
+            <button onClick={() => setViewMode('map')} className={`px-3 py-1.5 text-xs font-medium ${viewMode === 'map' ? 'bg-gray-100 text-gray-900' : 'text-gray-500'}`}>지도</button>
+          </div>
         </div>
       </div>
 
-      {/* Results — 지도 보기는 Phase 4-3(검색 지도)에서 복원 */}
+      {/* Results */}
       {isLoading ? (
         <div className="py-20 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" /></div>
+      ) : viewMode === 'map' ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
+            {properties.map((p) => <SearchResultCard key={p.id} property={p} />)}
+            {properties.length === 0 && <div className="py-20 text-center text-sm text-gray-400">검색 결과가 없습니다.</div>}
+          </div>
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <Suspense fallback={<div className="flex h-[600px] items-center justify-center rounded-xl border border-gray-200 bg-gray-50"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" /></div>}>
+              <PropertyMapView properties={properties} />
+            </Suspense>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {properties.map((p) => <SearchResultCard key={p.id} property={p} />)}
