@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Area, ComposedChart, Legend } from 'recharts'
-import { complexList, getComplexPriceTrend, getComplexPyeongComparison, getFairValueRange, getRegionalPriceSummary } from '@/utils/marketMockData'
-import type { PriceTrendPoint } from '@/utils/marketMockData'
+import { complexList, getComplexPriceTrend, getComplexPyeongComparison, getRegionalPriceSummary } from '@/utils/marketMockData'
+import type { PriceTrendPoint, PyeongComparison } from '@/utils/marketMockData'
+import { fetchComplexPriceTrend, fetchComplexPyeongComparison } from '@/api/complexTrades'
 import { formatPrice } from '@/utils/format'
 
 type Period = 6 | 12 | 36
@@ -12,28 +13,65 @@ export function ValuationPage() {
   const [compareComplex, setCompareComplex] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const trendData = getComplexPriceTrend(selectedComplex.id, period)
-  const pyeongData = getComplexPyeongComparison(selectedComplex.id)
-  const fairValueData = getFairValueRange(selectedComplex.id)
+  const [trendData, setTrendData] = useState<PriceTrendPoint[]>([])
+  const [pyeongData, setPyeongData] = useState<PyeongComparison[]>([])
+  const [compareTrend, setCompareTrend] = useState<PriceTrendPoint[] | null>(null)
+  const [dataSource, setDataSource] = useState<'real' | 'estimate'>('estimate')
+
   const priceSummary = getRegionalPriceSummary()
 
-  // Compare data
-  const compareTrend: PriceTrendPoint[] | null = compareComplex
-    ? getComplexPriceTrend(compareComplex, period)
-    : null
+  // 선택 단지: MOLIT 실거래 로드 → 실패/미매칭 시 추정 데이터 fallback
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      let real = false
+      let trend = await fetchComplexPriceTrend(selectedComplex.id, period).catch(() => null)
+      if (trend && trend.length > 0) real = true
+      else trend = getComplexPriceTrend(selectedComplex.id, period)
+      let pyeong = await fetchComplexPyeongComparison(selectedComplex.id).catch(() => null)
+      if (!pyeong || pyeong.length === 0) pyeong = getComplexPyeongComparison(selectedComplex.id)
+      if (cancelled) return
+      setTrendData(trend)
+      setPyeongData(pyeong)
+      setDataSource(real ? 'real' : 'estimate')
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [selectedComplex.id, period])
+
+  // 비교 단지 추이
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      if (!compareComplex) { setCompareTrend(null); return }
+      let trend = await fetchComplexPriceTrend(compareComplex, period).catch(() => null)
+      if (!trend || trend.length === 0) trend = getComplexPriceTrend(compareComplex, period)
+      if (!cancelled) setCompareTrend(trend)
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [compareComplex, period])
+
   const compareInfo = compareComplex ? complexList.find((c) => c.id === compareComplex) : null
 
   const filteredComplexes = searchQuery
     ? complexList.filter((c) => c.name.includes(searchQuery) || c.region.includes(searchQuery))
     : complexList
 
-  // Merge compare data
   const mergedTrendData = trendData.map((d, i) => ({
     ...d,
     comparePrice: compareTrend?.[i]?.avgPrice ?? null,
   }))
 
-  // Stats
+  // 적정 시세 범위: 실거래 월별 최저·평균·최고가 기반
+  const fairValueData = trendData.map((d) => ({
+    date: d.date,
+    actual: d.avgPrice,
+    median: d.avgPrice,
+    lowerBound: d.minPrice,
+    upperBound: d.maxPrice,
+  }))
+
   const latestPrice = trendData[trendData.length - 1]?.avgPrice ?? 0
   const startPrice = trendData[0]?.avgPrice ?? 0
   const changeRate = startPrice > 0 ? (((latestPrice - startPrice) / startPrice) * 100).toFixed(1) : '0'
@@ -118,6 +156,9 @@ export function ValuationPage() {
           <h3 className="text-sm font-bold">
             실거래가 추이
             {compareInfo && <span className="ml-2 text-xs font-normal text-gray-400">vs {compareInfo.name}</span>}
+            <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-medium ${dataSource === 'real' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+              {dataSource === 'real' ? '국토부 실거래가' : '추정 데이터'}
+            </span>
           </h3>
           <div className="flex gap-1">
             {([6, 12, 36] as Period[]).map((p) => (
@@ -208,7 +249,7 @@ export function ValuationPage() {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-[10px] text-gray-400">적정 시세 범위는 최근 거래가의 ±5% 기반으로 산정됩니다.</p>
+          <p className="mt-2 text-[10px] text-gray-400">적정 시세 범위는 해당 기간 실거래의 월별 최저·최고가를 기반으로 표시됩니다.</p>
         </div>
       </div>
 
@@ -240,7 +281,7 @@ export function ValuationPage() {
           </table>
         </div>
         <p className="mt-3 text-[10px] text-gray-400">
-          데이터 출처: 목업 데이터 (추후 국토교통부 실거래가 API 연동 예정)
+          단지 시세(위 차트)는 국토교통부 실거래가 기반이며, 지역별 요약 표는 참고용 추정치입니다.
         </p>
       </div>
     </div>

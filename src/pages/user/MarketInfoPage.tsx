@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Area, ComposedChart, Legend } from 'recharts'
-import { complexList, getComplexPriceTrend, getComplexPyeongComparison, getFairValueRange, getRegionSignals, getRegionalPriceSummary } from '@/utils/marketMockData'
-import type { SignalColor } from '@/utils/marketMockData'
+import { complexList, getComplexPriceTrend, getComplexPyeongComparison, getRegionSignals, getRegionalPriceSummary } from '@/utils/marketMockData'
+import type { SignalColor, PriceTrendPoint, PyeongComparison } from '@/utils/marketMockData'
+import { fetchComplexPriceTrend, fetchComplexPyeongComparison } from '@/api/complexTrades'
 import { formatPrice } from '@/utils/format'
 
 const signalEmoji: Record<SignalColor, string> = { green: '🟢', yellow: '🟡', red: '🔴', gray: '⚪' }
@@ -15,11 +16,38 @@ export function MarketInfoPage() {
   const [period, setPeriod] = useState<Period>(12)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const trendData = getComplexPriceTrend(selectedComplex.id, period)
-  const pyeongData = getComplexPyeongComparison(selectedComplex.id)
-  const fairValueData = getFairValueRange(selectedComplex.id)
+  const [trendData, setTrendData] = useState<PriceTrendPoint[]>([])
+  const [pyeongData, setPyeongData] = useState<PyeongComparison[]>([])
+  const [dataSource, setDataSource] = useState<'real' | 'estimate'>('estimate')
   const signals = getRegionSignals().slice(0, 8) // Top 8 for user view
   const priceSummary = getRegionalPriceSummary()
+
+  // 선택 단지: MOLIT 실거래 로드 → 실패/미매칭 시 추정 데이터 fallback
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      let real = false
+      let trend = await fetchComplexPriceTrend(selectedComplex.id, period).catch(() => null)
+      if (trend && trend.length > 0) real = true
+      else trend = getComplexPriceTrend(selectedComplex.id, period)
+      let pyeong = await fetchComplexPyeongComparison(selectedComplex.id).catch(() => null)
+      if (!pyeong || pyeong.length === 0) pyeong = getComplexPyeongComparison(selectedComplex.id)
+      if (cancelled) return
+      setTrendData(trend)
+      setPyeongData(pyeong)
+      setDataSource(real ? 'real' : 'estimate')
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [selectedComplex.id, period])
+
+  const fairValueData = trendData.map((d) => ({
+    date: d.date,
+    actual: d.avgPrice,
+    median: d.avgPrice,
+    lowerBound: d.minPrice,
+    upperBound: d.maxPrice,
+  }))
 
   const filteredComplexes = searchQuery
     ? complexList.filter((c) => c.name.includes(searchQuery) || c.region.includes(searchQuery) || c.dong.includes(searchQuery))
@@ -76,7 +104,12 @@ export function MarketInfoPage() {
       {/* Period Selector + Price Trend */}
       <div className="mb-6 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-bold">실거래가 추이</h3>
+          <h3 className="text-sm font-bold">
+            실거래가 추이
+            <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-medium ${dataSource === 'real' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+              {dataSource === 'real' ? '국토부 실거래가' : '추정 데이터'}
+            </span>
+          </h3>
           <div className="flex gap-1">
             {([6, 12, 36] as Period[]).map((p) => (
               <button
@@ -149,13 +182,16 @@ export function MarketInfoPage() {
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        <p className="mt-2 text-xs text-gray-400">적정 시세 범위는 최근 거래가의 ±5% 기반으로 산정됩니다.</p>
+        <p className="mt-2 text-xs text-gray-400">적정 시세 범위는 해당 기간 실거래의 월별 최저·최고가를 기반으로 표시됩니다.</p>
       </div>
 
       {/* Buy/Sell Signals Section */}
       <div className="mb-6 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-bold">매수/매도 적기 신호등</h3>
+          <h3 className="text-sm font-bold">
+            매수/매도 적기 신호등
+            <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">참고용 추정</span>
+          </h3>
           <Link to="/market-info" className="text-xs text-primary-600 hover:underline">더보기</Link>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

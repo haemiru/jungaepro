@@ -216,7 +216,7 @@ export function LocationAnalysisPage() {
           {/* Disclaimer — PDF에도 포함 */}
           <div className="rounded-lg bg-amber-50 p-3">
             <p className="text-xs text-amber-700">
-              본 분석 결과는 목업 데이터 기반이며, 실제 투자 판단의 근거로 사용할 수 없습니다.
+              본 입지 점수는 참고용 추정치이며(교통·학군·상권 등 외부 데이터 연동 예정), 실제 투자 판단의 근거로 사용할 수 없습니다.
               정확한 입지 분석은 현장 확인과 전문가 자문을 권장합니다.
             </p>
           </div>

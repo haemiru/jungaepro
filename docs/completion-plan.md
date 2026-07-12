@@ -187,6 +187,12 @@
 - 검증: lint 0, build 통과, `npm test` 27/27.
 - **프로덕션 하드닝(부수 발견·수정)**: Edge Function 4종 배포(naver-news·real-trade-price 신규), 프로덕션 시크릿 5종 설정(RESEND/MOLIT/NAVER/KAKAO), Resend jungaepro.com 인증 + RESEND_FROM. 슈퍼관리자 RPC 버그(00028) + 자동승인(00029) + 가입 알림 메일. 이메일 실배달 확인. → [[jungaepro-prod-infra-wired-2026-07]]
 
+### Phase 4 부분 진행 (2026-07-12, Opus — 준비물 불필요 항목)
+- **4-3 검색 지도**: `PropertyMapView`(Leaflet 다중 마커, 가격 라벨 + 상세 팝업 + fitBounds). SearchPage 목록/지도 토글 복원, 지도 lazy 로드.
+- **4-4 시세 실데이터**: `src/api/complexTrades.ts` 신규 — 단지→lawdCd(시군구) + aptNm 정규화 매칭으로 MOLIT 실거래 집계(월별 추이·평형 비교). ValuationPage/MarketInfoPage가 실거래 우선 로드 → 미매칭/실패 시 추정 데이터 fallback + "국토부 실거래가/추정 데이터" 배지. 적정시세는 실거래 월별 최저·최고가 기반. 지역요약·Signal·Location은 확보 불가라 "참고용 추정" 라벨로 정정("목업" 문구 제거).
+  - ⚠️ 실데이터는 선택 단지가 MOLIT에 매칭될 때만 표시(강남/서초/송파/마포/강동 5개구 8개 단지 lawdCd 하드코딩). 지역·전국 집계 실데이터화는 백엔드 사전집계 필요(향후).
+- **미착수(사용자 준비물 대기)**: 4-1 PG결제(토스 승인 대기), 4-2 알림톡(카카오 채널·템플릿).
+
 ## 권장 실행 순서
 
 Phase 1 → 2 → 3 은 외부 의존이 없으므로 즉시 연속 실행 (예상 규모: 파일 40~50개 수정).

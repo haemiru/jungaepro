@@ -20,18 +20,20 @@ export type ComplexInfo = {
   builtYear: number
   totalUnits: number
   pyeongs: number[]  // 평형대
+  lawdCd: string     // 법정동코드 5자리(시군구) — MOLIT 실거래가 조회용
+  matchName: string  // MOLIT aptNm 매칭용 정규화 이름(공백 제거)
 }
 
-// 서울 주요 아파트 단지
+// 서울 주요 아파트 단지 (lawdCd = 시군구 5자리, matchName = MOLIT 아파트명 매칭용)
 export const complexList: ComplexInfo[] = [
-  { id: 'cx-1', name: '래미안 레이카운티', region: '강남구', dong: '도곡동', builtYear: 2017, totalUnits: 1244, pyeongs: [34, 49, 59] },
-  { id: 'cx-2', name: '힐스테이트 클래시안', region: '서초구', dong: '반포동', builtYear: 2020, totalUnits: 888, pyeongs: [34, 46, 59] },
-  { id: 'cx-3', name: '잠실 엘스', region: '송파구', dong: '잠실동', builtYear: 2008, totalUnits: 5678, pyeongs: [33, 44, 59] },
-  { id: 'cx-4', name: '잠실 리센츠', region: '송파구', dong: '잠실동', builtYear: 2008, totalUnits: 5563, pyeongs: [33, 44, 59] },
-  { id: 'cx-5', name: '반포 자이', region: '서초구', dong: '반포동', builtYear: 2009, totalUnits: 3410, pyeongs: [33, 46, 59] },
-  { id: 'cx-6', name: '대치 래미안 대치팰리스', region: '강남구', dong: '대치동', builtYear: 2015, totalUnits: 1608, pyeongs: [34, 49, 59] },
-  { id: 'cx-7', name: '마포 래미안 푸르지오', region: '마포구', dong: '아현동', builtYear: 2014, totalUnits: 3885, pyeongs: [25, 34, 46] },
-  { id: 'cx-8', name: '둔촌 올림픽파크 에비뉴포레', region: '강동구', dong: '둔촌동', builtYear: 2024, totalUnits: 12032, pyeongs: [34, 49, 59, 84] },
+  { id: 'cx-1', name: '래미안 레이카운티', region: '강남구', dong: '도곡동', builtYear: 2017, totalUnits: 1244, pyeongs: [34, 49, 59], lawdCd: '11680', matchName: '래미안레이카운티' },
+  { id: 'cx-2', name: '힐스테이트 클래시안', region: '서초구', dong: '반포동', builtYear: 2020, totalUnits: 888, pyeongs: [34, 46, 59], lawdCd: '11650', matchName: '힐스테이트클래시안' },
+  { id: 'cx-3', name: '잠실 엘스', region: '송파구', dong: '잠실동', builtYear: 2008, totalUnits: 5678, pyeongs: [33, 44, 59], lawdCd: '11710', matchName: '잠실엘스' },
+  { id: 'cx-4', name: '잠실 리센츠', region: '송파구', dong: '잠실동', builtYear: 2008, totalUnits: 5563, pyeongs: [33, 44, 59], lawdCd: '11710', matchName: '리센츠' },
+  { id: 'cx-5', name: '반포 자이', region: '서초구', dong: '반포동', builtYear: 2009, totalUnits: 3410, pyeongs: [33, 46, 59], lawdCd: '11650', matchName: '반포자이' },
+  { id: 'cx-6', name: '대치 래미안 대치팰리스', region: '강남구', dong: '대치동', builtYear: 2015, totalUnits: 1608, pyeongs: [34, 49, 59], lawdCd: '11680', matchName: '래미안대치팰리스' },
+  { id: 'cx-7', name: '마포 래미안 푸르지오', region: '마포구', dong: '아현동', builtYear: 2014, totalUnits: 3885, pyeongs: [25, 34, 46], lawdCd: '11440', matchName: '마포래미안푸르지오' },
+  { id: 'cx-8', name: '올림픽파크 포레온', region: '강동구', dong: '둔촌동', builtYear: 2024, totalUnits: 12032, pyeongs: [34, 49, 59, 84], lawdCd: '11740', matchName: '올림픽파크포레온' },
 ]
 
 // Generate price trend data for a complex

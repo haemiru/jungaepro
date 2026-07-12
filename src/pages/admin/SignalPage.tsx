@@ -57,8 +57,11 @@ export function SignalPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold">매수/매도 적기 신호등</h1>
-        <p className="mt-1 text-sm text-gray-500">5개 지표의 가중 평균으로 지역별 매수/매도 시점을 판단합니다.</p>
+        <h1 className="text-xl font-bold">
+          매수/매도 적기 신호등
+          <span className="ml-2 align-middle rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500">참고용 추정</span>
+        </h1>
+        <p className="mt-1 text-sm text-gray-500">5개 지표의 가중 평균으로 지역별 매수/매도 시점을 추정하는 참고용 모델입니다.</p>
       </div>
 
       {/* Filter + Summary */}
