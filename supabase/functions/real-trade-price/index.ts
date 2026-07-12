@@ -171,7 +171,8 @@ Deno.serve(async (req) => {
     const xml = await res.text()
 
     const resultCode = xmlTag(xml, 'resultCode')
-    if (resultCode && resultCode !== '00') {
+    // 국토부 성공 코드: 구형 '00', 신형(RTMSDataSvc…Dev) '000'
+    if (resultCode && resultCode !== '00' && resultCode !== '000') {
       const resultMsg = xmlTag(xml, 'resultMsg')
       return new Response(
         JSON.stringify({ error: `국토부 API 오류: ${resultMsg} (${resultCode})` }),
