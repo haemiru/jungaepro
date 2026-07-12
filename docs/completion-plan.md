@@ -179,6 +179,14 @@
 - 검증: `npm run lint` 0, `tsc` 0, `npm run build` 통과 (RegistryPage 청크 5.96KB 생성 확인).
 2. ~~`.env` 실키 로테이션~~ — **불필요로 정정(2026-07-11)**. git 전체 히스토리에 `.env`가 커밋된 적 없고, 실키 문자열도 히스토리·번들 어디에도 노출되지 않음을 확인. 노출 경로가 없으므로 로테이션 불필요. (다른 경로로 키가 유출된 정황이 있을 때만 로테이션.)
 
+### Phase 3 완료 (2026-07-12, Opus)
+- **3-1 SEO/공유 메타**: `index.html`에 description·Open Graph·Twitter Card·canonical·theme-color 추가. OG 이미지 `public/og-image.png`(1200×630, 브랜드 블루+로고+슬로건) 생성 — `scripts/generate-og-image.mjs`(puppeteer). `public/robots.txt`(admin/auth disallow + sitemap), `public/sitemap.xml`(홈/가입/로그인). favicon은 logo.png + apple-touch-icon.
+- **3-2 보안 헤더**: `vercel.json`에 X-Content-Type-Options·X-Frame-Options(SAMEORIGIN)·Referrer-Policy·HSTS·Permissions-Policy 추가.
+- **3-4 단위 테스트**: vitest 도입(`vitest.config.ts`, `npm test`), `src/utils/format.test.ts` 27케이스(가격 포맷·거래유형별 가격·전화/사업자/주민번호 포맷·체크섬 검증·D-Day). 전부 통과.
+- **3-3 스모크 체크리스트**: `docs/smoke-test-checklist.md` — 가입→자동승인→포털→매물→문의→계약→임장→SEO 8개 섹션 수동 E2E 검증 (사용자 실행).
+- 검증: lint 0, build 통과, `npm test` 27/27.
+- **프로덕션 하드닝(부수 발견·수정)**: Edge Function 4종 배포(naver-news·real-trade-price 신규), 프로덕션 시크릿 5종 설정(RESEND/MOLIT/NAVER/KAKAO), Resend jungaepro.com 인증 + RESEND_FROM. 슈퍼관리자 RPC 버그(00028) + 자동승인(00029) + 가입 알림 메일. 이메일 실배달 확인. → [[jungaepro-prod-infra-wired-2026-07]]
+
 ## 권장 실행 순서
 
 Phase 1 → 2 → 3 은 외부 의존이 없으므로 즉시 연속 실행 (예상 규모: 파일 40~50개 수정).

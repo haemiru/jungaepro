@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# 관리자·인증 경로는 크롤링 불필요
+Disallow: /admin
+Disallow: /super-admin
+Disallow: /auth
+
+Sitemap: https://www.jungaepro.com/sitemap.xml
