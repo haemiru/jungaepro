@@ -26,8 +26,8 @@ export type ComplexInfo = {
 
 // 서울 주요 아파트 단지 (lawdCd = 시군구 5자리, matchName = MOLIT 아파트명 매칭용)
 export const complexList: ComplexInfo[] = [
-  { id: 'cx-1', name: '래미안 레이카운티', region: '강남구', dong: '도곡동', builtYear: 2017, totalUnits: 1244, pyeongs: [34, 49, 59], lawdCd: '11680', matchName: '래미안레이카운티' },
-  { id: 'cx-2', name: '힐스테이트 클래시안', region: '서초구', dong: '반포동', builtYear: 2020, totalUnits: 888, pyeongs: [34, 46, 59], lawdCd: '11650', matchName: '힐스테이트클래시안' },
+  { id: 'cx-1', name: '도곡 렉슬', region: '강남구', dong: '도곡동', builtYear: 2006, totalUnits: 3002, pyeongs: [25, 33, 43, 55], lawdCd: '11680', matchName: '도곡렉슬' },
+  { id: 'cx-2', name: '아크로리버파크', region: '서초구', dong: '반포동', builtYear: 2016, totalUnits: 1612, pyeongs: [24, 34, 43, 59], lawdCd: '11650', matchName: '아크로리버파크' },
   { id: 'cx-3', name: '잠실 엘스', region: '송파구', dong: '잠실동', builtYear: 2008, totalUnits: 5678, pyeongs: [33, 44, 59], lawdCd: '11710', matchName: '잠실엘스' },
   { id: 'cx-4', name: '잠실 리센츠', region: '송파구', dong: '잠실동', builtYear: 2008, totalUnits: 5563, pyeongs: [33, 44, 59], lawdCd: '11710', matchName: '리센츠' },
   { id: 'cx-5', name: '반포 자이', region: '서초구', dong: '반포동', builtYear: 2009, totalUnits: 3410, pyeongs: [33, 46, 59], lawdCd: '11650', matchName: '반포자이' },
