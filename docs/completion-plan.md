@@ -150,7 +150,7 @@
 
 ## 사용자 준비물 체크리스트 (Phase 4 착수 조건)
 
-- [x] PG: 토스페이먼츠 정기결제 가맹 신청 (승인 대기 중) → 승인 후 시크릿 키 확보
+- [x] PG: 토스페이먼츠 정기결제 가맹 신청 (승인 대기 중). **연동 코드는 완료(2026-07-15)** — 테스트 키로 검증 가능, 승인 시 라이브 키 교체만 남음
 - [ ] 알림톡: 카카오 비즈니스 채널 개설 + 대행사(솔라피 등) 가입 + 템플릿 승인
 - [ ] (선택) 카카오 developers JS 키 — Leaflet 유지 시 불필요
 
@@ -192,6 +192,25 @@
 - **4-4 시세 실데이터**: `src/api/complexTrades.ts` 신규 — 단지→lawdCd(시군구) + aptNm 정규화 매칭으로 MOLIT 실거래 집계(월별 추이·평형 비교). ValuationPage/MarketInfoPage가 실거래 우선 로드 → 미매칭/실패 시 추정 데이터 fallback + "국토부 실거래가/추정 데이터" 배지. 적정시세는 실거래 월별 최저·최고가 기반. 지역요약·Signal·Location은 확보 불가라 "참고용 추정" 라벨로 정정("목업" 문구 제거).
   - ⚠️ 실데이터는 선택 단지가 MOLIT에 매칭될 때만 표시(강남/서초/송파/마포/강동 5개구 8개 단지 lawdCd 하드코딩). 지역·전국 집계 실데이터화는 백엔드 사전집계 필요(향후).
 - **미착수(사용자 준비물 대기)**: 4-1 PG결제(토스 승인 대기), 4-2 알림톡(카카오 채널·템플릿).
+
+### Phase 4-3/4-4 검증 + nit 정리 (2026-07-13, Fable 검증 → Opus 실행)
+- **Fable 검증 판정: PASS-with-nits** — 4-3(검색 지도)·4-4(시세 실데이터) 모두 완료 기준 충족, lint 0 / build / test 27/27 통과. "목업" UI 문구 0건 확인.
+- **gap #1(높음·운영) 해소**: `ded98d7`(성공코드 `000` 오판 수정, 07-12 14:19 커밋)이 07-12 오전 최초 배포 이후라 prod에 버그 버전이 떠 있었음 → `supabase functions deploy real-trade-price` 재배포로 반영(사용자 실행).
+- **nit 5건 수정·커밋(`170fd04`)**: ① MarketInfoPage 지역표 "참고용 추정치" 라벨(#2) ② 적정시세 문구 real/estimate 분기(#5, MarketInfo·Valuation) ③ MOLIT numOfRows 100→1000, 표본 절단 방지(#3, Edge Function·dev 프록시) ④ 비교 단지 추이 date 키 병합(#6, ValuationPage) ⑤ dev 프록시 resultCode 검사 추가(#7). → numOfRows 변경 반영 위해 real-trade-price 2차 재배포 완료.
+- **잔여(출시 후 검토)**: #8 3년 조회 시 단지당 최대 48회 Edge Function 병렬 호출 부담(캐시로 완화) — 동시성 제한 또는 pyeong 집계를 trend 결과 재사용으로 통합.
+
+### Phase 4-1 PG 결제 구현 (2026-07-15, Opus — 토스 테스트키로 라이브 직전까지)
+- **핵심 판단**: 토스 가맹 심사(라이브 결제)를 기다릴 필요 없이 **테스트 키(`test_ck_`/`test_sk_`)로 빌링키 발급·자동결제·웹훅 전 과정을 지금 구현·검증** 가능. 승인 시 시크릿만 `live_*`로 교체 + pg_cron 스케줄 활성화 + 웹훅 URL 등록으로 라이브 전환(코드 변경 0).
+- **결정(사용자)**: 자동갱신=Supabase **pg_cron** / 결제정책=**표준 SaaS**(업그레이드 즉시청구·즉시적용, 다운그레이드·해지는 만기까지 현재 플랜 유지 후 전환, 환불 없음).
+- **DB**(`00030_billing.sql`): `billing_subscriptions`(빌링키 보관, service_role 전용 RLS — 클라 직접 SELECT 차단), `payment_history`(소유자 읽기), `get_my_subscription()` SECURITY DEFINER(billing_key 제외 노출), pg_cron 스케줄은 주석 템플릿(go-live 시 등록).
+- **Edge Functions**: `payment`(issue=빌링키 발급+첫결제 / change=업그레이드 즉시청구·다운그레이드 예약·예약취소 / cancel=만기 해지예약), `payment-webhook`(결제상태 멱등 갱신, verify_jwt=false), `billing-cron`(만기 구독 자동결제·pending 전환·실패 시 past_due, x-cron-secret 보호). 공용 `_shared/toss.ts`. `config.toml`에 함수별 verify_jwt.
+- **dev**: `vite.config.ts` `paymentProxy()` — `/api/payment`가 Edge Function 미러링(service-role DB 쓰기, 빌링키 서버측 유지). 승인 없이 `npm run dev`로 E2E 테스트 가능.
+- **클라이언트**: `src/api/payment.ts`(토스 v2 SDK `@tosspayments/tosspayments-sdk` 카드등록 + 실 `fetchBillingInfo`/`changePlan`/`cancelSubscription`), `settings.ts`의 mock `fetchBillingInfo`/`changePlan` 제거. `BillingSettingsPage`: 카드등록·업/다운그레이드·해지·예약취소·결제수단 표시·실 결제이력 + 결제창 리다이렉트(`?billing=success`) 처리. `database.ts` 타입 3종 + RPC 등록. `.env.example`에 `VITE_TOSS_CLIENT_KEY`/`TOSS_SECRET_KEY`/`CRON_SECRET`/`SUPABASE_SERVICE_ROLE_KEY`.
+- **검증**: `npm run lint` 0 · `tsc + vite build` 통과(BillingSettingsPage 청크 9.99KB) · `npm test` 27/27.
+- **dev 세팅 완료(2026-07-15)**: `.env` 키 4종 입력, 원격 Supabase에 `00030_billing.sql` 적용, 토스 시크릿 인증 통과 확인(`scratchpad/verify-billing-setup.mjs`). 카드 등록 시도 시 요청이 토스까지 정상 도달 확인.
+- ⛔ **실제 결제 E2E는 대기 — 토스 자동결제(빌링) 계약 활성화 필요**: 자동결제는 일반결제와 달리 테스트도 토스 계약 선행 필수. 미계약 시 결제창이 `"자동 결제(빌링) 계약이 안 되어 있습니다"`로 거절(우리 코드 정상). 토스 고객센터(1544-7772/support@tosspayments.com)에 자동결제 도입 요청 필요. 활성화되면 `.env` 키 2줄 교체로 작동.
+- **이어하기 상세**: `docs/billing-integration-status.md` (병목·다음 할 일 체크리스트·프로덕션 배포·파일 목록 전부 정리).
+- **미착수**: 4-2 알림톡(카카오 채널·템플릿 대기).
 
 ## 권장 실행 순서
 

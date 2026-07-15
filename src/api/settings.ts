@@ -1,6 +1,6 @@
 import { supabase, supabaseAuth } from '@/api/supabase'
 import { getAgentProfileId } from '@/api/helpers'
-import type { AgentProfile, AgentFeatureSetting, StaffMember, PropertyCategory, StaffRole, PlanType } from '@/types/database'
+import type { AgentProfile, AgentFeatureSetting, StaffMember, PropertyCategory, StaffRole } from '@/types/database'
 
 // ──────────────────────────────────────────
 // Office Settings (agent_profiles table)
@@ -728,54 +728,10 @@ export async function toggleIntegration(key: string, connected: boolean, data?: 
 }
 
 // ──────────────────────────────────────────
-// Billing / Plan (agent_profiles.subscription_plan)
+// Billing / Plan
 // ──────────────────────────────────────────
-
-export type BillingInfo = {
-  current_plan: PlanType
-  plan_label: string
-  price: number
-  next_billing_date: string
-  payment_history: { date: string; amount: number; description: string; status: string }[]
-}
-
-const PLAN_META: Record<PlanType, { label: string; price: number }> = {
-  free: { label: 'Free', price: 0 },
-  basic: { label: 'Basic', price: 3000 },
-  pro: { label: 'Pro', price: 5000 },
-}
-
-export async function fetchBillingInfo(): Promise<BillingInfo> {
-  const profile = await fetchOfficeSettings()
-  const plan = profile.subscription_plan as PlanType
-  const meta = PLAN_META[plan]
-  return {
-    current_plan: plan,
-    plan_label: meta.label,
-    price: meta.price,
-    next_billing_date: '2026-03-01',
-    payment_history: meta.price > 0
-      ? [
-          { date: '2026-02-01', amount: meta.price, description: `${meta.label} 요금제 (월간)`, status: '결제완료' },
-          { date: '2026-01-01', amount: meta.price, description: `${meta.label} 요금제 (월간)`, status: '결제완료' },
-          { date: '2025-12-01', amount: meta.price, description: `${meta.label} 요금제 (월간)`, status: '결제완료' },
-        ]
-      : [],
-  }
-}
-
-export async function changePlan(plan: PlanType): Promise<void> {
-  const agentId = await getAgentProfileId()
-  const { error } = await supabase
-    .from('agent_profiles')
-    .update({
-      subscription_plan: plan,
-      subscription_started_at: new Date().toISOString(),
-    })
-    .eq('id', agentId)
-
-  if (error) throw error
-}
+// 결제(구독) API 는 토스페이먼츠 정기결제 연동으로 `src/api/payment.ts` 로 이동했다.
+//   fetchBillingInfo / changePlan / cancelSubscription / startCardRegistration / completeBillingAuth
 
 // ──────────────────────────────────────────
 // Security Settings

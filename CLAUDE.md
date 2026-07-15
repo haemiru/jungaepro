@@ -181,14 +181,14 @@ Each feature lives in `src/features/{name}/` with its own `components/`, `hooks/
 - **Floating** (`/admin/settings/floating`) — button ON/OFF + order + URL/phone config, FAB color picker, preview
 - **Notifications** (`/admin/settings/notifications`) — matrix: 7 notification types × 3 channels (push/email/alimtalk)
 - **Integrations** (`/admin/settings/integrations`) — 8 external services grouped by category, connect/disconnect with URL input
-- **Billing** (`/admin/settings/billing`) — current plan display, plan comparison (Free/Basic/Pro/Enterprise), payment history table
+- **Billing** (`/admin/settings/billing`) — 토스 정기결제 실연동(`src/api/payment.ts`): 현재 플랜, 요금제 비교(Free/Basic/Pro), 카드 등록/업·다운그레이드/해지/예약취소, 실 결제이력. 토스 결제창 리다이렉트(`?billing=success`) 처리. 상세: `docs/billing-integration-status.md`
 - **Security** (`/admin/settings/security`) — password change, 2FA toggle, login records table, active sessions with terminate
 - Mock API in `src/api/settings.ts` — comprehensive mock data for all settings sections
 
 ### Database
 
 - SQL migrations in `supabase/migrations/`
-- Tables: `users`, `agent_profiles`, `staff_members`, `agent_feature_settings`, `properties`, `property_categories`, `property_favorites`, `inquiries`, `inquiry_replies`, `customers`, `customer_activities`, `contracts`, `contract_process`, `ai_generation_logs`, `move_in_guides`, `inspections`, `rental_properties`, `rental_payments`, `repair_requests`, `rental_share_links`, `shared_properties`, `co_brokerage_requests`, `custom_domains`, `reserved_slugs`
+- Tables: `users`, `agent_profiles`, `staff_members`, `agent_feature_settings`, `properties`, `property_categories`, `property_favorites`, `inquiries`, `inquiry_replies`, `customers`, `customer_activities`, `contracts`, `contract_process`, `ai_generation_logs`, `move_in_guides`, `inspections`, `rental_properties`, `rental_payments`, `repair_requests`, `rental_share_links`, `shared_properties`, `co_brokerage_requests`, `custom_domains`, `reserved_slugs`, `billing_subscriptions`, `payment_history`
 - All tables have Row Level Security (RLS) policies
 - TypeScript types in `src/types/database.ts` — must use `type` aliases (not `interface`) for Row types to satisfy Supabase's `GenericSchema` constraint
 
@@ -201,12 +201,18 @@ Each feature lives in `src/features/{name}/` with its own `components/`, `hooks/
 
 ### API 연동 현황
 
-`src/api/`의 22개 모듈 중 21개가 **실제 Supabase 연동**이다 (Auth·DB·Storage·Edge Functions). Edge Functions 4종: `generate-content`(Gemini), `send-email`(Resend), `real-trade-price`(국토부 실거래가 + `real_trade_cache`), `naver-news`. dev에서는 Vite proxy(`/api/*`), prod에서는 Edge Function 직접 호출로 서버 키를 보호한다.
+`src/api/`의 23개 모듈이 **실제 Supabase 연동**이다 (Auth·DB·Storage·Edge Functions). Edge Functions 7종: `generate-content`(Gemini), `send-email`(Resend), `real-trade-price`(국토부 실거래가 + `real_trade_cache`), `naver-news`, `payment`(토스 정기결제 issue/change/cancel), `payment-webhook`(토스 결제상태), `billing-cron`(자동갱신, pg_cron). dev에서는 Vite proxy(`/api/*`), prod에서는 Edge Function 직접 호출로 서버 키를 보호한다.
 
 **mock으로 남아 있는 부분** (외부 연동 대기 — docs/completion-plan.md Phase 4 참조):
 - `src/api/legal.ts` — 등기부 조회(`lookupRegistry`)·전자서명. 현재 미사용 (UI 숨김)
-- `src/api/settings.ts`의 `fetchBillingInfo` — 결제 이력/다음 결제일 하드코딩. PG(토스페이먼츠) 연동 시 교체
 - `src/utils/marketMockData.ts` — 시세/시그널/입지분석 데이터 (화면에 "목업 데이터" 명시)
+
+### 결제 (토스페이먼츠 정기결제)
+
+`src/api/payment.ts` — 토스 v2 빌링(결제창 인증) 정기결제. 코드·검증 완료(2026-07-15), **실제 결제 테스트는 토스 자동결제(빌링) 계약 활성화 대기 중**. 상세·이어하기: `docs/billing-integration-status.md`.
+- 흐름: `startCardRegistration`(토스 SDK 결제창) → `?billing=success` 리다이렉트 → `completeBillingAuth`(billingKey 발급+첫결제) → `changePlan`(업그레이드 즉시청구/다운그레이드 예약)/`cancelSubscription`(만기 해지). 구독 상태는 `get_my_subscription()` RPC로만 조회(billing_key 비노출).
+- 정책: 업그레이드 즉시청구·즉시적용 / 다운그레이드·해지 만기까지 현재 플랜 유지 후 전환 / 환불 없음 / 자동갱신 pg_cron.
+- ⚠️ 자동결제(빌링)는 일반결제와 달리 **테스트도 토스 계약 활성화 필수** (미계약 시 결제창이 "자동 결제(빌링) 계약이 안 되어 있습니다"로 거절). `agent_profiles.subscription_plan`이 유효 플랜의 source of truth.
 
 ### Error Handling
 

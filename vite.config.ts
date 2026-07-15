@@ -1,6 +1,8 @@
 import { defineConfig, loadEnv, type PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { createClient } from '@supabase/supabase-js'
+import { randomUUID } from 'node:crypto'
 import path from 'path'
 
 // Load all env vars (including non-VITE_ ones) for server-side plugins
@@ -309,8 +311,117 @@ function naverNewsProxy(): PluginOption {
   }
 }
 
+/** Vite dev server plugin: proxies /api/payment → 토스 정기결제 (payment Edge Function 미러링) */
+function paymentProxy(): PluginOption {
+  const TOSS_API = 'https://api.tosspayments.com'
+  const PRICE: Record<string, number> = { free: 0, basic: 3000, pro: 5000 }
+  const LABEL: Record<string, string> = { free: 'Free', basic: 'Basic', pro: 'Pro' }
+  const RANK: Record<string, number> = { free: 0, basic: 1, pro: 2 }
+  const authHeader = (k: string) => 'Basic ' + Buffer.from(k + ':').toString('base64')
+  const addMonth = (d: Date) => { const x = new Date(d); x.setMonth(x.getMonth() + 1); return x }
+  const last4 = (m?: string) => (m ? (m.match(/(\d{4})\D*$/)?.[1] ?? m.slice(-4)) : '')
+
+  return {
+    name: 'payment-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/payment', async (req, res) => {
+        const send = (b: unknown, s = 200) => { res.writeHead(s, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(b)) }
+        if (req.method === 'OPTIONS') {
+          res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' })
+          res.end(); return
+        }
+
+        const secretKey = env.TOSS_SECRET_KEY
+        const supaUrl = env.VITE_SUPABASE_URL
+        const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY
+        if (!secretKey || !supaUrl || !serviceKey) return send({ error: 'TOSS_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY 미설정 (.env)' }, 500)
+
+        const token = ((req.headers['authorization'] as string | undefined) ?? '').replace('Bearer ', '')
+        if (!token) return send({ error: '로그인이 필요합니다.' }, 401)
+
+        const admin = createClient(supaUrl, serviceKey)
+        const { data: userData, error: userErr } = await admin.auth.getUser(token)
+        if (userErr || !userData?.user) return send({ error: '인증에 실패했습니다.' }, 401)
+        const userEmail = userData.user.email ?? undefined
+        const { data: agent, error: agentErr } = await admin
+          .from('agent_profiles').select('id, subscription_plan, office_name, representative')
+          .eq('user_id', userData.user.id).single()
+        if (agentErr || !agent) return send({ error: '중개사만 결제를 관리할 수 있습니다.' }, 403)
+
+        let raw = ''
+        for await (const chunk of req) raw += chunk
+        const body = JSON.parse(raw || '{}')
+        const action = body.action
+
+        type TossPayment = { status?: string; method?: string; approvedAt?: string; paymentKey?: string; receipt?: { url?: string } }
+        type TossIssue = { billingKey: string; cardCompany?: string; card?: { company?: string; number?: string } }
+        const tossFetch = async <T>(path: string, payload: unknown): Promise<T> => {
+          const r = await fetch(`${TOSS_API}${path}`, { method: 'POST', headers: { Authorization: authHeader(secretKey), 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+          const d = await r.json() as T & { message?: string }
+          if (!r.ok) throw new Error(d?.message || `토스 오류 (${r.status})`)
+          return d
+        }
+        const chargeAndRecord = async (plan: 'basic' | 'pro', billingKey: string, customerKey: string) => {
+          const orderId = `sub_${randomUUID()}`
+          const p = await tossFetch<TossPayment>(`/v1/billing/${billingKey}`, { customerKey, amount: PRICE[plan], orderId, orderName: `중개프로 ${LABEL[plan]} 구독`, customerEmail: userEmail, customerName: agent.representative || agent.office_name })
+          if (p.status !== 'DONE') throw new Error('결제가 완료되지 않았습니다.')
+          await admin.from('payment_history').insert({ agent_id: agent.id, order_id: orderId, plan, amount: PRICE[plan], status: 'paid', method: p.method ?? null, receipt_url: p.receipt?.url ?? null, payment_key: p.paymentKey ?? null, approved_at: p.approvedAt ?? null, raw: p })
+          return p
+        }
+
+        try {
+          if (action === 'issue') {
+            const { authKey, customerKey, plan } = body
+            if (!authKey || !customerKey || (plan !== 'basic' && plan !== 'pro')) return send({ error: '잘못된 요청입니다.' }, 400)
+            if (customerKey !== agent.id) return send({ error: '고객 식별자가 일치하지 않습니다.' }, 403)
+            const issued = await tossFetch<TossIssue>('/v1/billing/authorizations/issue', { authKey, customerKey })
+            const company = issued.cardCompany ?? issued.card?.company ?? null
+            const now = new Date(); const periodEnd = addMonth(now)
+            await chargeAndRecord(plan, issued.billingKey, customerKey)
+            await admin.from('billing_subscriptions').upsert({ agent_id: agent.id, customer_key: customerKey, billing_key: issued.billingKey, card_company: company, card_last4: last4(issued.card?.number), plan, status: 'active', pending_plan: null, cancel_at_period_end: false, current_period_start: now.toISOString(), current_period_end: periodEnd.toISOString(), updated_at: now.toISOString() }, { onConflict: 'agent_id' })
+            await admin.from('agent_profiles').update({ subscription_plan: plan, subscription_started_at: now.toISOString() }).eq('id', agent.id)
+            return send({ ok: true, plan, card_company: company, card_last4: last4(issued.card?.number), current_period_end: periodEnd.toISOString() })
+          }
+
+          const { data: sub } = await admin.from('billing_subscriptions').select('*').eq('agent_id', agent.id).single()
+
+          if (action === 'change') {
+            const plan = body.plan
+            if (!['free', 'basic', 'pro'].includes(plan)) return send({ error: '잘못된 플랜입니다.' }, 400)
+            if (!sub) return send({ error: '등록된 결제 수단이 없습니다. 먼저 카드를 등록해주세요.' }, 400)
+            const current = agent.subscription_plan; const now = new Date()
+            if (plan === current) {
+              if (sub.pending_plan || sub.cancel_at_period_end) await admin.from('billing_subscriptions').update({ pending_plan: null, cancel_at_period_end: false, status: 'active', updated_at: now.toISOString() }).eq('agent_id', agent.id)
+              return send({ ok: true, plan, resumed: true })
+            }
+            if (RANK[plan] > RANK[current]) {
+              await chargeAndRecord(plan, sub.billing_key, sub.customer_key)
+              const periodEnd = addMonth(now)
+              await admin.from('billing_subscriptions').update({ plan, status: 'active', pending_plan: null, cancel_at_period_end: false, current_period_start: now.toISOString(), current_period_end: periodEnd.toISOString(), updated_at: now.toISOString() }).eq('agent_id', agent.id)
+              await admin.from('agent_profiles').update({ subscription_plan: plan, subscription_started_at: now.toISOString() }).eq('id', agent.id)
+              return send({ ok: true, plan, immediate: true, current_period_end: periodEnd.toISOString() })
+            }
+            await admin.from('billing_subscriptions').update({ pending_plan: plan, cancel_at_period_end: plan === 'free', updated_at: now.toISOString() }).eq('agent_id', agent.id)
+            return send({ ok: true, plan: current, pending_plan: plan, effective_at: sub.current_period_end })
+          }
+
+          if (action === 'cancel') {
+            if (!sub) return send({ error: '구독 정보가 없습니다.' }, 400)
+            await admin.from('billing_subscriptions').update({ pending_plan: 'free', cancel_at_period_end: true, updated_at: new Date().toISOString() }).eq('agent_id', agent.id)
+            return send({ ok: true, canceled_at_period_end: sub.current_period_end })
+          }
+
+          return send({ error: '알 수 없는 요청입니다.' }, 400)
+        } catch (e) {
+          return send({ error: e instanceof Error ? e.message : 'proxy error' }, 502)
+        }
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), geminiProxy(), kakaoGeoProxy(), resendEmailProxy(), molitProxy(), naverNewsProxy()],
+  plugins: [react(), tailwindcss(), geminiProxy(), kakaoGeoProxy(), resendEmailProxy(), molitProxy(), naverNewsProxy(), paymentProxy()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",
+    "@tosspayments/tosspayments-sdk": "^2.7.1",
     "html2canvas-pro": "^2.0.2",
     "jspdf": "^4.2.0",
     "leaflet": "^1.9.4",
