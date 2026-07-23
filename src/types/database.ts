@@ -1319,6 +1319,69 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          id: string
+          agent_id: string
+          created_by: string | null
+          subject: string
+          category: string
+          status: 'open' | 'answered' | 'closed'
+          last_sender: 'agent' | 'admin'
+          last_message_at: string
+          agent_last_read_at: string
+          admin_last_read_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          created_by?: string | null
+          subject: string
+          category?: string
+          status?: 'open' | 'answered' | 'closed'
+          last_sender?: 'agent' | 'admin'
+          last_message_at?: string
+          agent_last_read_at?: string
+          admin_last_read_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          subject?: string
+          category?: string
+          status?: 'open' | 'answered' | 'closed'
+          last_sender?: 'agent' | 'admin'
+          last_message_at?: string
+          agent_last_read_at?: string
+          admin_last_read_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      support_ticket_messages: {
+        Row: {
+          id: string
+          ticket_id: string
+          sender_type: 'agent' | 'admin'
+          sender_user_id: string | null
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          ticket_id: string
+          sender_type: 'agent' | 'admin'
+          sender_user_id?: string | null
+          body: string
+          created_at?: string
+        }
+        Update: {
+          body?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1371,6 +1434,41 @@ export type Database = {
       get_my_subscription: {
         Args: Record<string, never>
         Returns: MySubscription[]
+      }
+      create_support_ticket: {
+        Args: { p_subject: string; p_category: string; p_body: string }
+        Returns: string
+      }
+      post_support_message: {
+        Args: { p_ticket_id: string; p_body: string }
+        Returns: string
+      }
+      mark_support_ticket_read: {
+        Args: { p_ticket_id: string }
+        Returns: undefined
+      }
+      set_support_ticket_status: {
+        Args: { p_ticket_id: string; p_status: string }
+        Returns: undefined
+      }
+      admin_get_support_tickets: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          agent_id: string
+          office_name: string
+          representative: string
+          email: string
+          slug: string | null
+          subject: string
+          category: string
+          status: 'open' | 'answered' | 'closed'
+          last_sender: 'agent' | 'admin'
+          last_message_at: string
+          created_at: string
+          message_count: number
+          admin_unread: boolean
+        }[]
       }
     }
     Enums: {

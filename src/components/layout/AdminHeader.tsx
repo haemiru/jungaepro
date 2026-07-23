@@ -166,6 +166,13 @@ export function AdminHeader({ onToggleSidebar }: AdminHeaderProps) {
               슈퍼관리자
             </Link>
           )}
+          <Link
+            to="/admin/support"
+            className="rounded-lg px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+            title="중개프로 운영팀에 문의"
+          >
+            고객지원
+          </Link>
           {isNavItemPermitted('settings', user?.role, staffPermissions) && (
             <Link
               to="/admin/settings"
