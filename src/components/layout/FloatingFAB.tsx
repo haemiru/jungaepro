@@ -10,17 +10,35 @@ import { formatPhone, parsePhone } from '@/utils/format'
 import type { InquiryType } from '@/types/database'
 import toast from 'react-hot-toast'
 
+// 플로팅 설정에 별도 번호가 지정되지 않았을 때 나타나는 기본 placeholder.
+// 이 값이면 "미설정"으로 보고 가입 시 필수 입력한 사무소 전화번호로 자동 매핑한다.
+const PLACEHOLDER_PHONE = '02-1234-5678'
+
 const defaultFabConfig = {
-  phone: { enabled: true, number: '02-1234-5678' },
+  phone: { enabled: true, number: '' },
   kakao: { enabled: true, url: 'https://pf.kakao.com/_example' },
   naver: { enabled: true, url: 'https://booking.naver.com/example' },
   inquiry: { enabled: true },
 }
 
-function toFabConfig(settings: FloatingSettings) {
+/**
+ * 전화상담 번호 결정:
+ * - 개공이 플로팅 설정에서 직접 지정한 실제 번호가 있으면 그 번호를 우선 사용
+ * - 미설정(빈 값 또는 기본 placeholder)이면 가입 시 받은 사무소 전화번호(officePhone)로 자동 매핑
+ */
+function resolvePhoneNumber(configuredPhone: string | undefined, officePhone?: string | null): string {
+  const configured = (configuredPhone ?? '').trim()
+  if (configured && configured !== PLACEHOLDER_PHONE) return configured
+  return officePhone?.trim() || configured
+}
+
+function toFabConfig(settings: FloatingSettings, officePhone?: string | null) {
   const btn = (key: string) => settings.buttons.find((b) => b.key === key)
   return {
-    phone: { enabled: btn('phone')?.is_enabled ?? true, number: btn('phone')?.phone ?? '02-1234-5678' },
+    phone: {
+      enabled: btn('phone')?.is_enabled ?? true,
+      number: resolvePhoneNumber(btn('phone')?.phone, officePhone),
+    },
     kakao: { enabled: btn('kakao')?.is_enabled ?? true, url: btn('kakao')?.url ?? '' },
     naver: { enabled: btn('naver')?.is_enabled ?? false, url: btn('naver')?.url ?? '' },
     inquiry: { enabled: btn('inquiry')?.is_enabled ?? true },
@@ -31,13 +49,14 @@ export function FloatingFAB() {
   const [isInquiryOpen, setIsInquiryOpen] = useState(false)
   const [isChatbotOpen, setIsChatbotOpen] = useState(false)
   const agentId = useTenantStore((s) => s.agentId)
+  const officePhone = useTenantStore((s) => s.tenant?.phone ?? null)
   const [fabConfig, setFabConfig] = useState(defaultFabConfig)
 
   useEffect(() => {
     fetchPublicFloatingSettings(agentId ?? undefined)
-      .then((settings) => setFabConfig(toFabConfig(settings)))
+      .then((settings) => setFabConfig(toFabConfig(settings, officePhone)))
       .catch(() => {})
-  }, [agentId])
+  }, [agentId, officePhone])
 
   // Hide FAB when chatbot is open
   if (isChatbotOpen) {
@@ -55,7 +74,7 @@ export function FloatingFAB() {
           <span>🤖</span>
           <span>AI 상담</span>
         </button>
-        {fabConfig.phone.enabled && (
+        {fabConfig.phone.enabled && fabConfig.phone.number && (
           <a
             href={`tel:${fabConfig.phone.number}`}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-lg ring-1 ring-gray-200 transition-transform hover:scale-105"
