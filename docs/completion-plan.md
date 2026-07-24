@@ -212,6 +212,13 @@
 - **이어하기 상세**: `docs/billing-integration-status.md` (병목·다음 할 일 체크리스트·프로덕션 배포·파일 목록 전부 정리).
 - **미착수**: 4-2 알림톡(카카오 채널·템플릿 대기).
 
+### 슈퍼관리자 개선 + 개공↔슈퍼관리자 문의 채널 (2026-07-24, Opus) — 출시 후 개선
+- **배경**: 실가입자 유입 중. 슈퍼관리자 콘솔이 "조회+인증+플랜변경"뿐이라 ① 가입 개공의 공개 포털을 열어볼 수 없고 ② 슈퍼관리자 페이지가 AdminLayout 밖 독립 라우트라 관리자 화면 복귀 동선이 없으며 ③ 개공↔운영자 소통 창구가 전무했음(사용자 지적).
+- **빠른 개선 2건(슈퍼관리자 페이지)**: ① 가입자 표 `slug`을 `{slug}.jungaepro.com` 새 탭 링크로 전환(문의 스레드 헤더에도 "포털" 버튼) ② 상단에 "← 관리자 대시보드로 돌아가기" 링크 추가.
+- **문의 채널(인앱 스레드)**: DB `00031_support_tickets.sql` — `support_tickets`/`support_ticket_messages` + RLS(직접 SELECT 방어) + SECURITY DEFINER RPC 7종(`create_support_ticket`/`post_support_message`/`mark_support_ticket_read`/`set_support_ticket_status`/`admin_get_support_tickets` + `can_access_support_ticket` 헬퍼 + `touch_support_ticket` 트리거). 개공 측 `/admin/support`(목록·새 문의·스레드·답장·종료) + 헤더 "고객지원" 진입점. 슈퍼관리자 "문의함" 탭(미확인 배지·상태 필터·검색·답변·종료/다시열기, 개공 정보·포털 링크 노출). 이메일 알림(`src/api/supportNotify.ts`): 문의/답장→운영자, 답변→개공(기존 Resend 재사용, 발송 실패 non-fatal). `database.ts`에 테이블 2종 + RPC 5종 타입 등록.
+- **검증**: `npm run lint` 0 · `tsc + vite build` 통과(SupportPage 10KB, SuperAdminPage 24KB) · 커밋 `9d02bba` 푸시.
+- **DB 적용 주의**: 마이그레이션 추적 드리프트 발견 — `supabase migration list`상 remote 기록은 `00012`까지뿐이나 `00013~00031`은 실제 적용됨(super admin·billing·auto-verify 전부 라이브). 이 상태에서 `supabase db push`는 00013+를 재실행하려다 깨지므로 금지. `00031`은 멱등(`IF NOT EXISTS`/`OR REPLACE`)으로 작성해 Supabase SQL Editor에 단독 적용(사용자 실행 완료). ⚠️ `00030`은 billing이 선점 → 이 마이그레이션 번호는 `00031`. → [[jungaepro-migration-tracking-drift]]
+
 ## 권장 실행 순서
 
 Phase 1 → 2 → 3 은 외부 의존이 없으므로 즉시 연속 실행 (예상 규모: 파일 40~50개 수정).
